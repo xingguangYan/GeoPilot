@@ -5,14 +5,14 @@ from qgis.PyQt.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton,
     QComboBox, QLabel, QLineEdit, QSplitter, QMessageBox,
     QGroupBox, QFormLayout, QCheckBox, QProgressBar, QTabWidget,
-    QWidget, QScrollArea, QFrame, QDialogButtonBox
+    QWidget, QScrollArea, QFrame, QDialogButtonBox, QToolButton
 )
 from qgis.PyQt.QtGui import QTextCursor, QFont, QIcon, QPixmap
 from qgis.PyQt.QtCore import Qt, QThread, pyqtSignal, QSettings, QUrl
 from qgis.core import QgsProject, QgsLayerTreeLayer, QgsMessageLog
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPTS_DIR = os.path.join(PLUGIN_DIR, "scripts")
+SCRIPTS_DIR = os.path.join(PLUGIN_DIR, scripts)
 
 
 class ApiWorker(QThread):
@@ -37,6 +37,28 @@ class ApiWorker(QThread):
 class GeoPilotDialog(QDialog):
     """Main chat dialog for GeoPilot."""
 
+    PROMPT_EXAMPLES = [
+        ("\U0001f5fa 研究区分析", "Create Figure 1: Study area map showing the location with satellite imagery, administrative boundaries, scale bar, north arrow, and legend."),
+        ("\U0001f33f 植被分析", "Calculate NDVI from the current multispectral raster and create a time series chart."),
+        ("\U0001f3d4 土地利用", "Run land cover classification on the current image using Random Forest with 100 trees and 5 classes."),
+        ("\U0001f4ca 变化检测", "Perform change detection between 2020 and 2025 imagery and create a change map figure."),
+        ("\U0001f30d 空间格局", "Calculate and visualize the spatial pattern (Moran\'s I, LISA) for the current vector layer."),
+        ("\U0001f4c4 导出报告", "Generate a complete research report with all methods, results, and SCI-style figures."),
+    ]
+
+    SYSTEM_PROMPT_DEFAULT = """You are GeoPilot, a professional geospatial AI assistant integrated with QGIS.
+You help users with:
+- Geospatial data processing and analysis
+- Remote sensing image analysis and index calculation
+- Land cover classification and change detection
+- Spatial statistics and pattern analysis
+- SCI journal-quality figure generation
+- Workflow design and automation
+
+Always provide clear, step-by-step guidance or executable Python code when appropriate.
+Use QGIS processing framework (Processing.run) when possible.
+Respond in the user\'s language (Chinese or English)."""
+
     def __init__(self, iface, plugin_dir):
         super().__init__(iface.mainWindow())
         self.iface = iface
@@ -45,121 +67,266 @@ class GeoPilotDialog(QDialog):
         self.conversation = []
         self.current_provider = None
         self.worker = None
+        self.help_visible = False
         self.setup_ui()
         self.load_settings()
+        self.show_welcome()
 
     def setup_ui(self):
         """Build the dialog UI."""
         self.setWindowTitle("GeoPilot - AI Geospatial Assistant")
-        self.resize(900, 700)
-        self.setMinimumSize(600, 400)
+        self.resize(960, 760)
+        self.setMinimumSize(700, 500)
+        self.setStyleSheet("""
+            QDialog { background-color: #1e1e2e; }
+            QLabel { color: #cdd6f4; font-size: 10pt; }
+            QGroupBox { color: #89b4fa; font-weight: bold; border: 1px solid #313244; border-radius: 6px; margin-top: 10px; padding-top: 16px; }
+            QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
+            QComboBox { background-color: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; padding: 4px 8px; }
+            QComboBox:hover { border-color: #89b4fa; }
+            QComboBox QAbstractItemView { background-color: #313244; color: #cdd6f4; selection-background-color: #45475a; }
+            QLineEdit { background-color: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; padding: 4px 8px; }
+            QLineEdit:hover { border-color: #89b4fa; }
+            QPushButton { background-color: #313244; color: #cdd6f4; border: 1px solid #45475a; border-radius: 4px; padding: 6px 14px; }
+            QPushButton:hover { background-color: #45475a; border-color: #89b4fa; }
+            QProgressBar { background-color: #313244; border: none; border-radius: 4px; height: 6px; text-align: center; }
+            QProgressBar::chunk { background-color: #89b4fa; border-radius: 4px; }
+            QTextEdit { background-color: #1e1e2e; color: #cdd6f4; border: 1px solid #313244; border-radius: 4px; font-family: Consolas; font-size: 11pt; }
+            QScrollBar:vertical { background-color: #1e1e2e; width: 8px; }
+            QScrollBar::handle:vertical { background-color: #45475a; border-radius: 4px; min-height: 20px; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+        """)
 
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(6)
+        main_layout.setContentsMargins(10, 10, 10, 10)
 
-        # === Provider Selection ====
-        top_layout = QHBoxLayout()
-        top_layout.addWidget(QLabel("Model Provider:"))
+        # ========== HEADER ==========
+        header = QHBoxLayout()
+        title_label = QLabel("<b style="color:#89b4fa;font-size:14pt;">GeoPilot</b>  <span style="color:#6c7086;font-size:9pt;">AI Geospatial Assistant</span>")
+        header.addWidget(title_label)
+        header.addStretch()
 
+        self.help_btn = QToolButton()
+        self.help_btn.setText("\u2753 Help")
+        self.help_btn.setCheckable(True)
+        self.help_btn.setChecked(False)
+        self.help_btn.toggled.connect(self.toggle_help)
+        self.help_btn.setStyleSheet("QToolButton { background-color: #313244; color: #a6e3a1; border: 1px solid #45475a; border-radius: 4px; padding: 4px 12px; } QToolButton:hover { border-color: #a6e3a1; } QToolButton:checked { background-color: #45475a; }")
+        header.addWidget(self.help_btn)
+        main_layout.addLayout(header)
+
+        # ========== HELP PANEL (collapsible) ==========
+        self.help_panel = QFrame()
+        self.help_panel.setStyleSheet("QFrame { background-color: #181825; border: 1px solid #313244; border-radius: 6px; padding: 8px; }")
+        help_layout = QVBoxLayout(self.help_panel)
+        help_layout.setSpacing(4)
+
+        help_title = QLabel("<b style="color:#a6e3a1;">\U0001f916 Quick Prompt Examples</b> <span style="color:#6c7086;">- Click to auto-fill</span>")
+        help_layout.addWidget(help_title)
+
+        # Prompt suggestion buttons in a grid
+        btn_grid = QHBoxLayout()
+        btn_grid.setSpacing(4)
+        row1 = QHBoxLayout()
+        row2 = QHBoxLayout()
+        for i, (icon, prompt) in enumerate(self.PROMPT_EXAMPLES):
+            btn = QPushButton(f"{icon} {prompt.split(':')[0]}")
+            btn.setToolTip(prompt[:80] + "..." if len(prompt) > 80 else prompt)
+            btn.setStyleSheet("QPushButton { background-color: #313244; color: #a6e3a1; border: 1px solid #45475a; border-radius: 4px; padding: 6px 10px; font-size: 9pt; text-align: left; } QPushButton:hover { background-color: #45475a; border-color: #a6e3a1; }")
+            btn.clicked.connect(lambda checked, p=prompt: self.fill_prompt(p))
+            if i < 4:
+                row1.addWidget(btn)
+            else:
+                row2.addWidget(btn)
+        btn_grid.addLayout(row1)
+        help_layout.addLayout(btn_grid)
+        help_layout.addLayout(row2)
+
+        # Tips text
+        tips = QLabel("<span style="color:#6c7086;font-size:9pt;">\U0001f4a1 Tip: Describe your task naturally. GeoPilot can process vectors, rasters, run analyses, and generate SCI figures.</span>")
+        help_layout.addWidget(tips)
+        self.help_panel.setVisible(False)
+        main_layout.addWidget(self.help_panel)
+
+        # ========== PROVIDER SETTINGS ==========
+        settings_group = QGroupBox("\u2699 Provider Settings")
+        settings_group.setCheckable(True)
+        settings_group.setChecked(False)
+        settings_group.setStyleSheet(settings_group.styleSheet() + "QGroupBox { font-size: 10pt; }")
+        settings_layout = QVBoxLayout(settings_group)
+
+        # Provider + Model row
+        prov_row = QHBoxLayout()
+        prov_row.addWidget(QLabel("Provider:"))
         self.provider_combo = QComboBox()
         self.update_provider_list()
         self.provider_combo.setMinimumWidth(180)
         self.provider_combo.currentTextChanged.connect(self.on_provider_changed)
-        top_layout.addWidget(self.provider_combo)
-
-        top_layout.addWidget(QLabel("Model:"))
+        prov_row.addWidget(self.provider_combo)
+        prov_row.addSpacing(10)
+        prov_row.addWidget(QLabel("Model:"))
         self.model_combo = QComboBox()
         self.model_combo.setEditable(True)
-        top_layout.addWidget(self.model_combo)
-        top_layout.addStretch()
-        layout.addLayout(top_layout)
+        self.model_combo.setMinimumWidth(200)
+        prov_row.addWidget(self.model_combo)
+        prov_row.addStretch()
+        settings_layout.addLayout(prov_row)
 
-        # API settings line
-        api_layout = QHBoxLayout()
-        api_layout.addWidget(QLabel("API Key:"))
+        # API Key + Base URL
+        api_row = QHBoxLayout()
+        api_row.addWidget(QLabel("API Key:"))
         self.api_key_input = QLineEdit()
         self.api_key_input.setEchoMode(QLineEdit.Password)
-        api_layout.addWidget(self.api_key_input)
-
-        api_layout.addWidget(QLabel("Base URL:"))
+        self.api_key_input.setPlaceholderText("Enter your API key...")
+        api_row.addWidget(self.api_key_input)
+        api_row.addSpacing(10)
+        api_row.addWidget(QLabel("Base URL:"))
         self.base_url_input = QLineEdit()
-        self.base_url_input.setPlaceholderText("Optional: custom endpoint URL")
-        api_layout.addWidget(self.base_url_input)
-        layout.addLayout(api_layout)
+        self.base_url_input.setPlaceholderText("Custom endpoint (optional)")
+        api_row.addWidget(self.base_url_input)
+        settings_layout.addLayout(api_row)
 
-        # === Chat Area ====
+        # System prompt
+        sys_row = QHBoxLayout()
+        sys_row.addWidget(QLabel("System Prompt:"))
+        self.sys_prompt_input = QLineEdit()
+        self.sys_prompt_input.setPlaceholderText("Custom system prompt (optional)")
+        sys_row.addWidget(self.sys_prompt_input)
+        settings_layout.addLayout(sys_row)
+
+        main_layout.addWidget(settings_group)
+
+        # ========== CHAT DISPLAY ==========
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
-        self.chat_display.setStyleSheet("QTextEdit { background-color: #1e1e2e; color: #cdd6f4; font-family: Consolas; font-size: 11pt; }")
-        layout.addWidget(self.chat_display, stretch=1)
+        main_layout.addWidget(self.chat_display, stretch=1)
 
-        # === Input Area ====
-        input_layout = QHBoxLayout()
+        # ========== INPUT AREA ==========
+        input_frame = QFrame()
+        input_frame.setStyleSheet("QFrame { background-color: #181825; border: 1px solid #313244; border-radius: 6px; padding: 4px; }")
+        input_layout_inner = QVBoxLayout(input_frame)
+        input_layout_inner.setSpacing(4)
+        input_layout_inner.setContentsMargins(4, 4, 4, 4)
+
         self.input_field = QTextEdit()
-        self.input_field.setPlaceholderText("Describe your geospatial task in natural language...")
-        self.input_field.setMaximumHeight(80)
-        self.input_field.setStyleSheet("QTextEdit { font-size: 11pt; }")
-        input_layout.addWidget(self.input_field, stretch=1)
+        self.input_field.setPlaceholderText("Describe your geospatial task in natural language..."""
+"""e.g., "Calculate NDVI from the current Landsat image and create a classified map"""")
+        self.input_field.setMaximumHeight(70)
+        self.input_field.setStyleSheet("QTextEdit { background-color: #1e1e2e; border: 1px solid #313244; border-radius: 4px; padding: 6px; font-size: 11pt; } QTextEdit:focus { border-color: #89b4fa; }")
+        input_layout_inner.addWidget(self.input_field)
 
-        self.send_btn = QPushButton("Send")
-        self.send_btn.setStyleSheet("QPushButton { background-color: #89b4fa; color: #1e1e2e; font-weight: bold; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #74c7ec; }")
+        btn_row = QHBoxLayout()
+        self.send_btn = QPushButton("\u25b6 Send")
+        self.send_btn.setStyleSheet("QPushButton { background-color: #89b4fa; color: #1e1e2e; font-weight: bold; padding: 8px 24px; border-radius: 4px; font-size: 11pt; } QPushButton:hover { background-color: #74c7ec; } QPushButton:disabled { background-color: #45475a; color: #6c7086; }")
         self.send_btn.clicked.connect(self.on_send)
-        input_layout.addWidget(self.send_btn)
+        btn_row.addWidget(self.send_btn)
 
-        self.clear_btn = QPushButton("Clear")
+        self.clear_btn = QPushButton("\U0001f9f9 Clear")
+        self.clear_btn.setStyleSheet("QPushButton { background-color: #313244; color: #f38ba8; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #45475a; }")
         self.clear_btn.clicked.connect(self.clear_chat)
-        input_layout.addWidget(self.clear_btn)
-        layout.addLayout(input_layout)
+        btn_row.addWidget(self.clear_btn)
 
-        # === Progress ====
+        btn_row.addStretch()
+
+        status_label = QLabel("<span style="color:#6c7086;font-size:9pt;">Enter to send  |  Shift+Enter for new line</span>")
+        btn_row.addWidget(status_label)
+        input_layout_inner.addLayout(btn_row)
+
+        main_layout.addWidget(input_frame)
+
+        # ========== PROGRESS BAR ==========
         self.progress = QProgressBar()
         self.progress.setVisible(False)
-        layout.addWidget(self.progress)
+        self.progress.setMaximumHeight(4)
+        main_layout.addWidget(self.progress)
 
-        self.setLayout(layout)
+        self.setLayout(main_layout)
 
         # Keyboard shortcut: Enter to send
         self.input_field.installEventFilter(self)
 
-    def on_provider_changed(self, provider):
+    def toggle_help(self, checked):
+        """Toggle help panel visibility."""
+        self.help_panel.setVisible(checked)
+
+    def fill_prompt(self, prompt):
+        """Fill input field with example prompt."""
+        self.input_field.setPlainText(prompt)
+
+    def show_welcome(self):
+        """Show welcome message."""
+        welcome = (
+            "<div style="text-align:center;padding:30px;">"
+            "<h2 style="color:#89b4fa;">\U0001f30d Welcome to GeoPilot</h2>"
+            "<p style="color:#a6e3a1;font-size:11pt;">Your AI Geospatial Analysis Assistant for QGIS</p>"
+            "<hr style="border-color:#313244;width:60%;">"
+            "<p style="color:#6c7086;font-size:10pt;">""
+            "1. \u2699 Click <b>Provider Settings</b> to configure your AI model<br>"
+            "2. \U0001f4dd Type your task in natural language<br>"
+            "3. \U0001f916 GeoPilot will analyze, process, and generate results<br>"
+            "4. \u2753 Click <b>Help</b> for example prompts""
+            "</p>"
+            "<p style="color:#585b70;font-size:9pt;">""
+            "Supports 18 AI providers \u2022 Vector & Raster Analysis \u2022 Remote Sensing \u2022 SCI Figures""
+            "</p></div>"
+        )
+        self.chat_display.setHtml(welcome)
+
+    def on_provider_changed(self, provider_text):
         """Update model list when provider changes."""
         self.model_combo.clear()
         try:
             from .providers import list_providers
             registry = list_providers()
-            entry = registry.get(provider, {})
+            # Extract provider name from display text
+            name = provider_text
+            if "(" in provider_text:
+                name = provider_text.split("(")[-1].rstrip(")")
+            entry = registry.get(name, {})
             models = entry.get("models", ["default"])
-            self.model_combo.addItems(models)
-            self.model_combo.setCurrentIndex(0)
-            # Update API key placeholder
-            env_key = entry.get("env_key", "API_KEY") or "API_KEY"
-            self.api_key_input.setPlaceholderText(f"Enter {env_key} (or set {env_key} env var)")
-            # Update base URL placeholder
-            default_url = entry.get("default_url", "")
-            if default_url:
-                self.base_url_input.setPlaceholderText(f"Default: {default_url}")
-                self.base_url_input.setText("")
+            for m in models:
+                self.model_combo.addItem(m)
+            if models:
+                self.model_combo.setCurrentIndex(0)
         except Exception:
-            self.model_combo.addItems(["default"])
+            self.model_combo.addItems(["gpt-4o", "gpt-4o-mini"])
 
     def load_settings(self):
         """Load saved settings."""
-        provider = self.settings.value("geopilot/provider", "openai")
-        for i in range(self.provider_combo.count()):
-            if self.provider_combo.itemData(i) == provider:
-                self.provider_combo.setCurrentIndex(i)
-                break
+        provider = self.settings.value("geopilot/provider", "")
+        if provider:
+            idx = self.provider_combo.findData(provider)
+            if idx >= 0:
+                self.provider_combo.setCurrentIndex(idx)
+
+        model = self.settings.value("geopilot/model", "")
+        if model:
+            idx = self.model_combo.findText(model)
+            if idx >= 0:
+                self.model_combo.setCurrentIndex(idx)
+            else:
+                self.model_combo.setCurrentText(model)
 
         api_key = self.settings.value("geopilot/api_key", "")
-        if api_key: self.api_key_input.setText(api_key)
+        if api_key:
+            self.api_key_input.setText(api_key)
 
         base_url = self.settings.value("geopilot/base_url", "")
-        if base_url: self.base_url_input.setText(base_url)
+        if base_url:
+            self.base_url_input.setText(base_url)
+
+        sys_prompt = self.settings.value("geopilot/system_prompt", "")
+        if sys_prompt:
+            self.sys_prompt_input.setText(sys_prompt)
 
     def save_settings(self):
         """Save current settings."""
         self.settings.setValue("geopilot/provider", self.provider_combo.currentData() or self.provider_combo.currentText())
+        self.settings.setValue("geopilot/model", self.model_combo.currentText())
         self.settings.setValue("geopilot/api_key", self.api_key_input.text())
         self.settings.setValue("geopilot/base_url", self.base_url_input.text())
+        self.settings.setValue("geopilot/system_prompt", self.sys_prompt_input.text())
 
     def update_provider_list(self):
         """Populate provider list from registry."""
@@ -187,14 +354,19 @@ class GeoPilotDialog(QDialog):
         """Add a message to the chat display."""
         self.conversation.append({"role": role, "content": content})
 
-        esc = html.escape
         if role == "user":
-            prefix = "<b style=\"color:#89b4fa\">You:</b><br>"
+            prefix = "<div style="background-color:#313244;border-radius:6px;padding:8px 12px;margin:4px 0;"><b style="color:#89b4fa;">\U0001f464 You</b><br>"
         else:
-            prefix = "<b style=\"color:#a6e3a1\">GeoPilot:</b><br>"
+            prefix = "<div style="background-color:#181825;border-radius:6px;padding:8px 12px;margin:4px 0;"><b style="color:#a6e3a1;">\U0001f916 GeoPilot</b><br>"
 
-        code_content = content.replace("\n", "<br>")
-        self.chat_display.append(prefix + code_content + "<br><br>")
+        escaped = html.escape(content).replace("\n", "<br>")
+
+        # Format code blocks
+        import re
+        escaped = re.sub(r"`(\w*)\n(.*?)\n`", r"<pre style="background-color:#11111b;color:#cdd6f4;padding:8px;border-radius:4px;font-size:10pt;"><code>\2</code></pre>", escaped, flags=re.DOTALL)
+        escaped = re.sub(r"([^]+)", r"<code style="background-color:#11111b;color:#fab387;padding:1px 4px;border-radius:2px;">\1</code>", escaped)
+
+        self.chat_display.append(prefix + escaped + "</div>")
         self.chat_display.moveCursor(QTextCursor.End)
 
     def on_send(self):
@@ -208,17 +380,28 @@ class GeoPilotDialog(QDialog):
         self.add_message("user", text)
 
         # Get current layers as context
-        layers = QgsProject.instance().layerTreeRoot().findLayers()
-        context = f"Current layers ({len(layers)}):\n"
-        for l in layers[:10]:
-            layer = l.layer()
-            context += f"  - {layer.name()} ({layer.type().__class__.__name__})\n"
+        try:
+            layers = QgsProject.instance().layerTreeRoot().findLayers()
+            context = f"Current QGIS layers ({len(layers)}):\n"
+            for l in layers[:10]:
+                layer = l.layer()
+                crs = layer.crs().authid() if hasattr(layer, 'crs') else 'unknown'
+                context += f"  - {layer.name()} ({layer.type().__class__.__name__}, {crs})\n"
+            if context:
+                context += "\nUse these layers in your analysis where applicable."
+        except Exception:
+            context = ""
 
         try:
             provider = self.get_provider()
         except Exception as e:
-            self.add_message("assistant", f"Provider error: {str(e)}")
+            self.add_message("assistant", f"\u274c Provider error: {str(e)}")
             return
+
+        # System prompt
+        sys_prompt = self.sys_prompt_input.text().strip()
+        if not sys_prompt:
+            sys_prompt = self.SYSTEM_PROMPT_DEFAULT
 
         # Build messages
         messages = []
@@ -227,6 +410,7 @@ class GeoPilotDialog(QDialog):
         messages.extend(self.conversation[-20:])
 
         self.progress.setVisible(True)
+        self.progress.setRange(0, 0)  # indeterminate
         self.send_btn.setEnabled(False)
 
         self.worker = ApiWorker(provider, messages)
@@ -240,34 +424,20 @@ class GeoPilotDialog(QDialog):
         self.send_btn.setEnabled(True)
         self.add_message("assistant", response)
 
-        # Execute any code blocks if user enabled auto-run
-        self.execute_code_blocks(response)
-
     def on_error(self, error):
         """Handle API error."""
         self.progress.setVisible(False)
         self.send_btn.setEnabled(True)
-        self.add_message("assistant", f"Error: {error}")
-
-    def execute_code_blocks(self, response):
-        """Parse and optionally execute Python code blocks."""
-        import re
-        blocks = re.findall(r"```python\n(.*?)\n```", response, re.DOTALL)
-        for i, code in enumerate(blocks):
-            try:
-                exec(code, globals())
-                self.chat_display.append(f"<i>Executed block {i+1}</i><br>")
-            except Exception as e:
-                self.chat_display.append(f"<i>Block {i+1} error: {e}</i><br>")
+        self.add_message("assistant", f"\u274c {error}")
 
     def clear_chat(self):
         """Clear the chat history."""
         self.chat_display.clear()
         self.conversation = []
+        self.show_welcome()
 
     def eventFilter(self, obj, event):
         if obj == self.input_field and event.type() == event.KeyPress:
-            from qgis.PyQt.QtCore import QEvent
             if event.key() == Qt.Key_Return and not event.modifiers():
                 self.on_send()
                 return True
