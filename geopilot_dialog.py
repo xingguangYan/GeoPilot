@@ -46,18 +46,22 @@ class GeoPilotDialog(QDialog):
         ("\U0001f4c4 导出报告", "Generate a complete research report with all methods, results, and SCI-style figures."),
     ]
 
-    SYSTEM_PROMPT_DEFAULT = """You are GeoPilot, a professional geospatial AI assistant integrated with QGIS.
-You help users with:
-- Geospatial data processing and analysis
-- Remote sensing image analysis and index calculation
-- Land cover classification and change detection
-- Spatial statistics and pattern analysis
-- SCI journal-quality figure generation
-- Workflow design and automation
+    SYSTEM_PROMPT_DEFAULT = """You are GeoPilot, an AI assistant that directly controls QGIS through Python code.
 
-Always provide clear, step-by-step guidance or executable Python code when appropriate.
-Use QGIS processing framework (Processing.run) when possible.
-Respond in the user\'s language (Chinese or English)."""
+CRITICAL: You must respond with executable QGIS Python code. Your code WILL be executed automatically.
+
+Key APIs:
+- QgsProject.instance().mapLayers() - access layers
+- QgsProject.instance().addMapLayer(layer) - add layers
+- processing.run("native:buffer", {...}) - run algorithms
+- iface.messageBar().pushMessage() - show messages to user
+
+Output format:
+```python
+# Your QGIS Python code here
+```
+
+After code, explain briefly what was done. Use user's language."""
 
     def __init__(self, iface, plugin_dir):
         super().__init__(iface.mainWindow())
@@ -368,61 +372,128 @@ Respond in the user\'s language (Chinese or English)."""
         self.chat_display.append(prefix + escaped + "</div>")
         self.chat_display.moveCursor(QTextCursor.End)
 
+    
+    def build_qgis_context(self):
+        import os
+        info = []
+        try:
+            from qgis.core import QgsProject, QgsMessageLog
+            layers = QgsProject.instance().layerTreeRoot().findLayers()
+            info.append(f"Layers in project: {len(layers)}")
+            for l in layers[:15]:
+                layer = l.layer()
+                try: crs = layer.crs().authid()
+                except: crs = "?"
+                try: ext = layer.extent().toString()
+                except: ext = "?"
+                try: fc = layer.featureCount()
+                except: fc = "?"
+                info.append(f"  [{layer.name()}] type={layer.type().__class__.__name__} CRS={crs} features={fc}")
+                if hasattr(layer, 'fields'):
+                    fields = [f.name() for f in layer.fields()]
+                    if fields: info.append(f"    Fields: {', '.join(fields[:12])}")
+            from qgis.core import QgsApplication
+            reg = QgsApplication.processingRegistry()
+            common = ['native:buffer','native:clip','native:union','native:intersect',
+                      'native:dissolve','native:mergevectorlayers','native:reprojectlayer',
+                      'native:extractbyexpression','native:fieldcalculator',
+                      'native:rastercalc','native:slope','native:aspect','native:hillshade',
+                      'native:contour','native:reclassifybylayer','native:polygonize',
+                      'native:creategrid','native:printlayouttoimage',
+                      'native:createconstantraster','native:savefeatures',
+                      'native:joinattributesbylocation','native:createspatialindex']
+            avail = [a for a in common if a in reg.algorithms()]
+            info.append(f"Available algs: {len(avail)} -> {', '.join(avail)}")
+            proj = QgsProject.instance()
+            info.append(f"Project: {proj.fileName() or 'unsaved'} CRS: {proj.crs().authid()}")
+        except Exception as e:
+            info.append(f"Context err: {e}")
+        return chr(10).join(info)
     def on_send(self):
-        """Handle send button click."""
         text = self.input_field.toPlainText().strip()
         if not text:
             return
-
         self.save_settings()
         self.input_field.clear()
         self.add_message("user", text)
 
-        # Get current layers as context
-        try:
-            layers = QgsProject.instance().layerTreeRoot().findLayers()
-            context = f"Current QGIS layers ({len(layers)}):\n"
-            for l in layers[:10]:
-                layer = l.layer()
-                crs = layer.crs().authid() if hasattr(layer, 'crs') else 'unknown'
-                context += f"  - {layer.name()} ({layer.type().__class__.__name__}, {crs})\n"
-            if context:
-                context += "\nUse these layers in your analysis where applicable."
-        except Exception:
-            context = ""
-
+        context = self.build_qgis_context()
         try:
             provider = self.get_provider()
         except Exception as e:
             self.add_message("assistant", f"\u274c Provider error: {str(e)}")
             return
 
-        # System prompt
-        sys_prompt = self.sys_prompt_input.text().strip()
-        if not sys_prompt:
-            sys_prompt = self.SYSTEM_PROMPT_DEFAULT
-
-        # Build messages
-        messages = []
+        sys_prompt = self.sys_prompt_input.text().strip() or self.SYSTEM_PROMPT_DEFAULT
+        messages = [{"role": "system", "content": sys_prompt}]
         if context:
-            messages.append({"role": "system", "content": context})
-        messages.extend(self.conversation[-20:])
+            messages.append({"role": "user", "content": f"QGIS STATE:\n{context}\n\nUSER REQUEST: {text}"})
+        else:
+            messages.extend(self.conversation[-20:])
 
         self.progress.setVisible(True)
-        self.progress.setRange(0, 0)  # indeterminate
+        self.progress.setRange(0, 0)
         self.send_btn.setEnabled(False)
-
         self.worker = ApiWorker(provider, messages)
         self.worker.finished.connect(self.on_response)
         self.worker.error.connect(self.on_error)
         self.worker.start()
-
     def on_response(self, response):
-        """Handle API response."""
         self.progress.setVisible(False)
         self.send_btn.setEnabled(True)
         self.add_message("assistant", response)
 
+        import re
+        blocks = re.findall(r"```python\n(.*?)\n```", response, re.DOTALL)
+        if blocks:
+            self.exec_qgis_code(blocks)
+
+    def exec_qgis_code(self, code_blocks):
+        for i, code in enumerate(code_blocks):
+            try:
+                # Capture print output
+                import builtins
+                orig_print = builtins.print
+                output = []
+                builtins.print = lambda *a, **k: output.append(" ".join(str(x) for x in a))
+
+                exec_locals = {
+                    "iface": self.iface,
+                    "output": output,
+                }
+                # Add QGIS modules
+                try:
+                    from qgis.core import QgsProject, QgsVectorLayer, QgsRasterLayer, QgsMessageLog, QgsProcessingFeedback
+                    exec_locals["QgsProject"] = QgsProject
+                    exec_locals["QgsVectorLayer"] = QgsVectorLayer
+                    exec_locals["QgsRasterLayer"] = QgsRasterLayer
+                    exec_locals["QgsMessageLog"] = QgsMessageLog
+                    exec_locals["QgsProcessingFeedback"] = QgsProcessingFeedback
+                    exec_locals["QgsFeature"] = __import__("qgis.core", fromlist=["QgsFeature"]).QgsFeature
+                    exec_locals["QgsGeometry"] = __import__("qgis.core", fromlist=["QgsGeometry"]).QgsGeometry
+                    exec_locals["QgsField"] = __import__("qgis.core", fromlist=["QgsField"]).QgsField
+                    exec_locals["QgsFields"] = __import__("qgis.core", fromlist=["QgsFields"]).QgsFields
+                    from qgis import processing
+                    exec_locals["processing"] = processing
+                    from qgis.core import QgsApplication
+                    exec_locals["QgsApplication"] = QgsApplication
+                except Exception as e:
+                    output.append(f"QGIS import err: {e}")
+
+                exec(code, exec_locals)
+                builtins.print = orig_print
+
+                msg = "\n".join(output) if output else "Executed successfully."
+                self.add_message("assistant", f"\u2705 Block {i+1}: {msg}")
+                if self.iface:
+                    try:
+                        self.iface.messageBar().pushMessage("GeoPilot", f"Block {i+1} executed", level=0, duration=3)
+                    except:
+                        pass
+            except Exception as e:
+                import traceback
+                tb = traceback.format_exc()
+                self.add_message("assistant", f"\u274c Block {i+1}: {str(e)}\n```\n{tb[-500:]}\n```")
     def on_error(self, error):
         """Handle API error."""
         self.progress.setVisible(False)
