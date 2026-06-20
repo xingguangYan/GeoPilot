@@ -1,428 +1,323 @@
-# GeoPilot - AI Geospatial Assistant for QGIS
+﻿# GeoPilot - AI Geospatial Assistant for QGIS
 
 [![QGIS](https://img.shields.io/badge/QGIS-3.30+-41B95C)](https://qgis.org)
-[![Python](https://img.shields.io/badge/Python-3.9+-blue)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-Repo-181717?logo=github)](https://github.com/xingguangYan/GeoPilot)
+[![Release](https://img.shields.io/github/v/release/xingguangYan/GeoPilot?color=green)](https://github.com/xingguangYan/GeoPilot/releases)
+[![Downloads](https://img.shields.io/github/downloads/xingguangYan/GeoPilot/total?color=blue)](https://github.com/xingguangYan/GeoPilot/releases)
 
 ---
 
-**GeoPilot** is an AI-powered geospatial analysis assistant plugin for QGIS that enables natural-language geospatial data processing, remote sensing analysis, and SCI paper figure generation. Chat with AI in plain language to analyze geographic data, compute spectral indices, classify land cover, detect changes, and generate publication-ready figures.
+**GeoPilot** is an AI-powered geospatial analysis assistant plugin for QGIS that lets you control QGIS through natural language. Tell GeoPilot what you want to do in plain Chinese or English — it will automatically generate and execute QGIS Python code to process data, run analyses, and create publication-ready figures.
 
-## Features
-
-- **Natural Language Interface**: Describe your geospatial task in plain language
-- **20+ AI Model Providers**: OpenAI, Anthropic Claude, Google Gemini, DeepSeek, Moonshot (Kimi), Alibaba Qwen, Zhipu GLM, Baidu ERNIE, iFlytek Spark, 01.AI Yi, Mistral, Groq, Ollama (local), and more
-- **QGIS Processing**: Access 747+ native algorithms through natural language
-- **Remote Sensing**: 28+ spectral indices, land cover classification, change detection
-- **SCI Figures**: Publication-ready Figure 1-8 with journal-specific formatting
-- **Journal Matching**: Smart SCI journal recommendation with acceptance prediction
-- **Spatial Statistics**: Hotspot (Getis-Ord Gi*), Moran I, LISA clustering
-- **Workflow Automation**: 6 pre-built analysis pipelines
+> 🔥 **Key Innovation**: Unlike other AI plugins that only chat, GeoPilot **actually executes code in QGIS**. Your maps, buffers, NDVI, and classifications happen in real-time — no copy-pasting required.
 
 ---
 
-## Table of Contents
+## ✨ Features
 
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [AI Provider Configuration](#ai-provider-configuration)
-- [Usage Examples](#usage-examples)
-- [API Reference](#api-reference)
-- [Project Structure](#project-structure)
-- [Development](#development)
-- [FAQ](#faq)
-- [License](#license)
+### 🎯 Core Capabilities
+- **Natural Language → QGIS Operations**: Describe tasks in plain language, GeoPilot executes them automatically
+- **Auto Code Execution**: AI-generated Python code runs directly in QGIS — buffers, clips, NDVI, classifications all happen live
+- **18 AI Providers**: OpenAI, DeepSeek, Moonshot, Qwen, Zhipu, Yi, Mistral, Cohere, Perplexity, xAI Grok, Together AI, Fireworks AI, Groq, Anthropic Claude, Google Gemini, Ollama (Local), Baidu ERNIE, iFlytek Spark
+- **Smart Context Awareness**: Auto-detects current layers, CRS, fields, and available algorithms to inform the AI
+
+### 🗺️ Geospatial Analysis
+| Category | Capabilities |
+|----------|-------------|
+| **Vector Analysis** | Buffer, Clip, Union, Intersect, Dissolve, Spatial Join, Merge, Reproject, Field Calculator |
+| **Raster Analysis** | Slope, Aspect, Hillshade, Contour, Raster Calculator, Reclassify, Polygonize |
+| **Remote Sensing** | 28+ spectral indices (NDVI, EVI, SAVI, NDWI, MNDWI, NBR, etc.), Land Cover Classification, Change Detection |
+| **Spatial Statistics** | Hotspot Analysis (Getis-Ord Gi\*), Moran\'s I, LISA, Kernel Density, Voronoi |
+| **Network Analysis** | Shortest Path, Service Area |
+| **SCI Figures** | Study Area Map, Land Cover, Accuracy Assessment, Change Detection, Spatial Pattern, Graphical Abstract |
+
+### 🌐 Multi-Language Support
+- **Chinese & English** interface and AI responses
+- All Chinese AI providers natively supported (DeepSeek, Moonshot, Qwen, Zhipu, Baidu, Spark, Yi)
 
 ---
 
-## Installation
+## 📦 Installation
 
 ### Prerequisites
+- **QGIS 3.30+** (tested on 3.44.2)
+- Internet connection (for cloud AI providers)
+- API key for your chosen AI provider (except Ollama which runs locally)
 
-- QGIS 3.30 or higher
-- Python 3.9+ (bundled with QGIS)
-- Internet connection for API access
-
-### Method 1: QGIS Plugin Manager (Recommended)
-
-Once approved on the QGIS Plugin Repository:
-```
-1. Open QGIS
-2. Go to Plugins > Manage and Install Plugins
-3. Search for 'GeoPilot'
-4. Click Install
-```
-
-### Method 2: Install from ZIP
-
+### Quick Install (From Release ZIP)
 ```bash
-# Download the latest GeoPilot.zip from GitHub Releases
-# Then in QGIS:
-1. Plugins > Manage and Install Plugins
-2. Click 'Install from ZIP'
-3. Select the downloaded GeoPilot.zip
+1. Download GeoPilot-v1.1.0.zip from GitHub Releases
+2. Open QGIS → Plugins → Manage and Install Plugins
+3. Click "Install from ZIP" → Select the downloaded file
+4. Restart QGIS
+5. Enable GeoPilot in Plugins → Installed tab
 ```
 
-### Method 3: Manual Installation (Development)
-
+### Manual Install
 ```bash
-# Clone the repository
+# Clone
 git clone https://github.com/xingguangYan/GeoPilot.git
 
-# Create plugin directory in QGIS profile
-mkdir -p "%APPDATA%/QGIS/QGIS3/profiles/default/python/plugins/GeoPilot"
-
-# Copy files
+# Copy to QGIS plugins directory (Windows)
 xcopy /E /I GeoPilot "%APPDATA%/QGIS/QGIS3/profiles/default/python/plugins/GeoPilot/"
-
-# Or use Makefile (if you have make)
-make install
-
-# Restart QGIS
 ```
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-1. **Launch GeoPilot**: Click the GeoPilot icon in the toolbar, or go to `Plugins > GeoPilot`
+### 1. Launch GeoPilot
+Click the GeoPilot icon 🌐 in the QGIS toolbar, or go to `Plugins → GeoPilot → GeoPilot Chat`.
 
-2. **Configure AI Provider**:
-   - Select your preferred AI model from the dropdown (OpenAI, DeepSeek, Moonshot, etc.)
-   - Enter your API key
-   - Select or type the model name
+### 2. Configure Your AI Provider
+Click **Provider Settings** (⚙) to expand settings:
 
-3. **Chat with GeoPilot**:
-   - Type your geospatial task in natural language
-   - GeoPilot will generate and explain the analysis
-   - Python code blocks are automatically detected and executed
+```yaml
+Provider: DeepSeek       # Select your preferred AI
+Model: deepseek-chat     # Select model version
+API Key: sk-...          # Enter your API key
+Base URL: (leave default) # Most providers have pre-configured endpoints
+```
 
-### Example Queries
+### 3. Start Working!
+Just type what you want in natural language. GeoPilot will:
+1. Understand your request
+2. Generate QGIS Python code
+3. **Execute it automatically** in QGIS
+4. Show results in the chat
 
-| Category | Example Prompt |
-|----------|---------------|
-| Basic GIS | "Buffer the roads layer by 100 meters" |
-| Remote Sensing | "Calculate NDVI from the current Landsat layer" |
-| Classification | "Classify land cover using random forest with 5 classes" |
-| Change Detection | "Detect urban expansion between 2015 and 2020" |
-| Spatial Analysis | "Find hotspots of deforestation in the forest layer" |
-| SCI Figure | "Generate a study area map for my paper" |
-| Journal Match | "Recommend journals for my remote sensing paper" |
-| Full Workflow | "Analyze urban expansion in Wuhan from 2010 to 2025" |
+### 💬 Example Prompts
+
+| Category | Example |
+|----------|---------|
+| **Buffer** | `对道路图层做100米缓冲区` / "Buffer the roads layer by 100 meters" |
+| **Clip** | `用研究区边界裁剪所有图层` / "Clip all layers by the study area boundary" |
+| **NDVI** | `计算当前影像的NDVI并显示` / "Calculate NDVI from the current image" |
+| **Classification** | `用随机森林做5类土地利用分类` / "Run Random Forest classification with 5 classes" |
+| **Change Detection** | `检测2015到2020的城市扩张` / "Detect urban expansion from 2015 to 2020" |
+| **Hotspot** | `分析犯罪数据的热点区域` / "Find crime hotspots in the point layer" |
+| **Export Figure** | `生成研究区示意图，包含比例尺指北针` / "Create a study area map with scale bar and north arrow" |
+| **Batch** | `对每个矢量图层按字段融合` / "Dissolve each vector layer by its name field" |
 
 ---
 
-## AI Provider Configuration
+## 🔧 AI Provider Configuration
 
-GeoPilot supports 20+ AI model providers. Below is the complete configuration guide.
+### Getting API Keys
 
-### OpenAI-Compatible Providers
+| Provider | Get API Key | Best For |
+|----------|-------------|----------|
+| **OpenAI** | [platform.openai.com](https://platform.openai.com/api-keys) | General purpose, best quality |
+| **DeepSeek** | [platform.deepseek.com](https://platform.deepseek.com/api_keys) | Cost-effective, Chinese support |
+| **Moonshot/Kimi** | [platform.moonshot.cn](https://platform.moonshot.cn/console/api-keys) | Chinese, long context |
+| **Qwen (Tongyi)** | [bailian.console.aliyun.com](https://bailian.console.aliyun.com/) | Chinese, Alibaba ecosystem |
+| **Zhipu GLM** | [open.bigmodel.cn](https://open.bigmodel.cn/usercenter/apikeys) | Chinese, code generation |
+| **Yi (01.AI)** | [platform.01.ai](https://platform.01.ai/api-keys) | Chinese, fast responses |
+| **Anthropic Claude** | [console.anthropic.com](https://console.anthropic.com/) | Long context, analysis |
+| **Google Gemini** | [aistudio.google.com](https://aistudio.google.com/apikey) | Free tier available |
+| **Ollama (Local)** | No key needed (local) | Offline use, free |
 
-Most providers use the OpenAI-compatible API format. Configure them with:
-- **API Key**: Set via environment variable or enter in the dialog
-- **Base URL**: The API endpoint (defaults shown below)
-- **Model**: Select or type the model name
+### Supported Models
 
-| Provider | Display Name | Env Variable | Default Base URL | Models |
-|----------|-------------|--------------|-----------------|--------|
-| openai | OpenAI | `OPENAI_API_KEY` | https://api.openai.com/v1 | gpt-4o, gpt-4o-mini, gpt-4-turbo, o1-mini, o1-preview |
-| deepseek | DeepSeek | `DEEPSEEK_API_KEY` | https://api.deepseek.com/v1 | deepseek-chat, deepseek-reasoner, deepseek-v3, deepseek-r1 |
-| moonshot | Moonshot / Kimi | `MOONSHOT_API_KEY` | https://api.moonshot.cn/v1 | moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k |
-| qwen | Alibaba Qwen / Tongyi | `QWEN_API_KEY` | https://dashscope.aliyuncs.com/compatible-mode/v1 | qwen-max, qwen-plus, qwen-turbo, qwen2.5-72b-instruct |
-| zhipu | Zhipu AI / GLM | `ZHIPU_API_KEY` | https://open.bigmodel.cn/api/paas/v4 | glm-4-plus, glm-4, glm-4-flash, glm-4-air |
-| yi | 01.AI Yi | `YI_API_KEY` | https://api.01.ai/v1 | yi-lightning, yi-medium, yi-large, yi-vision |
-| mistral | Mistral AI | `MISTRAL_API_KEY` | https://api.mistral.ai/v1 | mistral-large-latest, mistral-small-latest, open-mistral-nemo |
-| cohere | Cohere | `COHERE_API_KEY` | https://api.cohere.ai/v1 | command-r-plus, command-r, command-nightly |
-| perplexity | Perplexity | `PERPLEXITY_API_KEY` | https://api.perplexity.ai | sonar-pro, sonar, sonar-reasoning |
-| xai | xAI Grok | `XAI_API_KEY` | https://api.x.ai/v1 | grok-beta, grok-2, grok-2-vision |
-| together | Together AI | `TOGETHER_API_KEY` | https://api.together.xyz/v1 | meta-llama-3.1-405b, mistralai/mixtral-8x22b |
-| fireworks | Fireworks AI | `FIREWORKS_API_KEY` | https://api.fireworks.ai/inference/v1 | llama-v3p1-405b, qwen2p5-72b |
-| groq | Groq | `GROQ_API_KEY` | https://api.groq.com/openai/v1 | llama3-70b-8192, mixtral-8x7b-32768, gemma2-9b-it |
-
-### Native API Providers
-
-These providers have unique API formats and require specific configuration:
-
-#### Anthropic Claude
-```bash
-# Set environment variable
-set ANTHROPIC_API_KEY=sk-ant-...
-# Or enter directly in the GeoPilot dialog
-```
-- Models: claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022, claude-3-opus-20240229
-- API: https://api.anthropic.com/v1
-
-#### Google Gemini
-```bash
-set GOOGLE_API_KEY=AIza...
-```
-- Models: gemini-1.5-pro, gemini-1.5-flash, gemini-1.5-flash-8b, gemini-2.0-flash-exp
-- API: https://generativelanguage.googleapis.com/v1beta
-
-#### Baidu ERNIE (Wenxin)
-```bash
-set BAIDU_API_KEY=your_api_key
-set BAIDU_SECRET_KEY=your_secret_key
-```
-- Models: ernie-4.0-8k, ernie-3.5-8k, ernie-speed, ernie-lite
-- Auth: OAuth 2.0 client_credentials flow
-
-#### iFlytek Spark (Xunfei)
-```bash
-set SPARK_APP_ID=your_app_id
-set SPARK_API_KEY=your_api_key
-set SPARK_API_SECRET=your_api_secret
-```
-- Models: 4.0Ultra, 3.5, 3.0
-- API: https://spark-api-open.xf-yun.com/v1
-
-#### Ollama (Local)
-```bash
-# No API key needed. Just run Ollama locally:
-ollama pull llama3.1
-ollama serve
-```
-- Models: llama3.1, llama3, mistral, qwen2.5, deepseek-r1, codellama, gemma2, mixtral
-- API: http://localhost:11434 (configurable)
-
-### Custom OpenAI-Compatible Endpoint
-
-You can use any OpenAI-compatible API by:
-1. Selecting any OpenAI-compatible provider from the list
-2. Setting the **Base URL** to your custom endpoint
-3. Entering the corresponding API key
-
-This works with self-hosted models (vLLM, TGI, SGLang), Azure OpenAI, and any proxy service.
+| Provider | Models |
+|----------|--------|
+| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo, o1, o1-mini, o3-mini, gpt-4.1 |
+| DeepSeek | deepseek-chat, deepseek-reasoner, deepseek-v3, deepseek-r1, deepseek-v4-pro, deepseek-v4-flash |
+| Moonshot | moonshot-v1-8k, moonshot-v1-32k, moonshot-v1-128k, moonshot-v1-auto |
+| Qwen | qwen-max, qwen-plus, qwen-turbo, qwen-long, qwen2.5-72b-instruct |
+| Zhipu | glm-4-plus, glm-4, glm-4-flash, glm-4-air, glm-4v-plus |
+| Yi | yi-lightning, yi-medium, yi-large, yi-vision, yi-large-turbo |
+| Mistral | mistral-large-latest, mistral-small-latest, codestral-latest |
+| Anthropic | claude-sonnet-4-20250514, claude-3-5-sonnet-20241022, claude-3-5-haiku |
+| Google | gemini-2.5-pro-exp-03-25, gemini-2.0-flash, gemini-1.5-pro |
+| Ollama | llama3.3, llama3.1, mistral, qwen2.5, deepseek-r1, phi4 |
+| Baidu | ernie-4.0-8k, ernie-3.5-8k, ernie-speed, ernie-lite |
+| Spark | 4.0Ultra, 4.0, 3.5, 3.0 |
+| xAI Grok | grok-beta, grok-2, grok-2-vision, grok-3 |
+| Perplexity | sonar-pro, sonar, sonar-reasoning |
+| Groq | llama-3.3-70b-versatile, mixtral-8x7b, gemma2-9b-it |
+| Together AI | meta-llama-3.3-70b, deepseek-ai/DeepSeek-R1 |
+| Fireworks AI | llama-v3p3-70b, qwen2p5-72b, deepseek-r1 |
+| Cohere | command-r-plus, command-r7-12-2024, command-a-03-2025 |
 
 ---
 
-## Usage Examples
+## 🎨 GUI Overview
 
-### Example 1: Basic GIS Analysis
+GeoPilot features a modern dark-theme chat interface:
 
-```python
-# In the GeoPilot chat dialog, type:
-"Create a 500-meter buffer around all roads and clip it with the study area boundary"
-
-# GeoPilot will execute:
-import processing
-result = processing.run('native:buffer', {
-    'INPUT': 'roads.shp',
-    'DISTANCE': 500,
-    'DISSOLVE': True,
-    'OUTPUT': 'roads_buffer.shp'
-})
-result2 = processing.run('native:clip', {
-    'INPUT': 'roads_buffer.shp',
-    'OVERLAY': 'study_area.shp',
-    'OUTPUT': 'roads_buffer_clipped.shp'
-})
+```
+┌─────────────────────────────────────────────┐
+│  GeoPilot - AI Geospatial Assistant  [? Help] │
+├─────────────────────────────────────────────┤
+│  ⚙ Provider Settings (collapsible)          │
+│  ┌─────────────────────────────────────┐    │
+│  │ Provider: [DeepSeek ▼] Model: [.. ▼]│    │
+│  │ API Key: [••••••••••••••••]        │    │
+│  │ Base URL: [______________]          │    │
+│  │ System Prompt: [______________]     │    │
+│  └─────────────────────────────────────┘    │
+├─────────────────────────────────────────────┤
+│  💬 Welcome to GeoPilot!                    │
+│  🌐 Your AI Geospatial Assistant             │
+│                                             │
+│  1. ⚙ Click Provider Settings to configure  │
+│  2. 📝 Type your task in natural language    │
+│  3. 🤖 GeoPilot executes code automatically  │
+├─────────────────────────────────────────────┤
+│  [Describe your task here...        ] [▶ Send] │
+└─────────────────────────────────────────────┘
 ```
 
-### Example 2: Remote Sensing Indices
-
-```python
-"Compute NDVI, NDWI, and NDBI from Landsat imagery and stack them"
-
-from geoai_remote_sensing import RemoteSensing
-import numpy as np
-
-rs = RemoteSensing()
-bands = {'B': blue, 'G': green, 'R': red, 'N': nir, 'S1': swir1}
-ndvi = rs.compute_index(bands, 'NDVI')
-ndwi = rs.compute_index(bands, 'MNDWI')
-ndbi = rs.compute_index(bands, 'NDBI')
-stack = np.stack([ndvi, ndwi, ndbi], axis=0)
-```
-
-### Example 3: Land Cover Classification
-
-```python
-"Classify land cover into 5 types using Random Forest"
-
-from geoai_remote_sensing import RemoteSensing
-rs = RemoteSensing()
-metrics = rs.train(X_train, y_train, algorithm='rf',
-    n_estimators=200, max_depth=15)
-print(f'OA={metrics["accuracy"]:.3f}, Kappa={metrics["kappa"]:.3f}')
-classified = rs.classify_raster(image_data, 'rf')
-```
-
-### Example 4: SCI Figure Generation
-
-```python
-"Generate a 4-panel land cover figure for my paper"
-
-from geoai_sci_figure import SCIFigures
-sf = SCIFigures(journal='Remote_Sensing')
-sf.figure2_land_cover(
-    lc_maps=[lc_2010, lc_2015, lc_2020, lc_2025],
-    time_labels=['2010', '2015', '2020', '2025'],
-    class_names=['Forest', 'Cropland', 'Built-up', 'Water', 'Bareland']
-)
-```
-
-### Example 5: Journal Recommendation
-
-```python
-"Recommend SCI journals for my urban expansion paper"
-
-from geoai_paper_agent import PaperSubmissionAgent
-agent = PaperSubmissionAgent()
-recs = agent.recommend(topic='urban expansion', target_if=5.0)
-for tier, journals in recs.items():
-    for j in journals:
-        print(f'[{tier}] {j["name"]} (IF={j["if"]})')
-```
+### Help Panel
+Click **? Help** to reveal quick-prompt buttons for common tasks:
+- 🌎 Study Area Analysis
+- 🌿 Vegetation Analysis (NDVI)
+- 🏙️ Land Cover Classification
+- 📊 Change Detection
+- 🌍 Spatial Pattern Analysis
+- 📄 Export Research Report
 
 ---
 
-## API Reference
-
-### Scripts Module
-
-| Module | Description | Key Classes |
-|--------|-------------|-------------|
-| `geoai_data_manager` | Geospatial data management | `DataManager` |
-| `geoai_vector_analysis` | Vector spatial analysis | `VectorAnalysis` |
-| `geoai_raster_analysis` | Raster/terrain analysis | `RasterAnalysis` |
-| `geoai_remote_sensing` | Spectral indices, classification, change detection | `RemoteSensing` |
-| `geoai_sci_figure` | SCI paper figure generation | `SCIFigures` |
-| `geoai_paper_agent` | Journal recommendation, cover letter | `PaperSubmissionAgent` |
-| `geoai_pipeline` | 6 pre-built analysis workflows | `GeoAIPipeline` |
-| `geoai_report` | Research report generation | `ResearchReport` |
-| `geoai_qgis_bootstrap` | QGIS Python bootstrap | `init_qgis()` |
-| `geoai_gee_bridge` | Google Earth Engine integration | `init_ee()` |
-| `geoai_env_setup` | Environment detection | `generate_env_report()` |
-
-### Providers Module
-
-| Function | Description |
-|----------|-------------|
-| `get_provider(name)` | Get a provider instance by name |
-| `list_providers()` | List all registered providers with metadata |
-| `register_provider(name, cls)` | Register a custom provider |
-
----
-
-## Project Structure
+## 🏗️ Project Architecture
 
 ```
 GeoPilot/
-+-- __init__.py              # QGIS plugin entry: classFactory()
-+-- metadata.txt             # QGIS Plugin Manager metadata
-+-- geopilot.py               # Main plugin class (menu, toolbar)
-+-- geopilot_dialog.py        # Chat dialog UI
-+-- providers/               # AI model provider system (20+ models)
-|   +-- __init__.py          # Provider registry
-|   +-- base.py              # Abstract base class
-|   +-- openai_compat.py     # OpenAI + 13 compatible providers
-|   +-- anthropic_provider.py # Anthropic Claude
-|   +-- google_provider.py   # Google Gemini
-|   +-- baidu_provider.py    # Baidu ERNIE
-|   +-- spark_provider.py    # iFlytek Spark
-|   +-- ollama_provider.py   # Local Ollama
-+-- scripts/                 # GeoAI analysis engine (13 modules)
-|   +-- geoai_data_manager.py
-|   +-- geoai_vector_analysis.py
-|   +-- geoai_raster_analysis.py
-|   +-- geoai_remote_sensing.py
-|   +-- geoai_sci_figure.py
-|   +-- geoai_paper_agent.py
-|   +-- geoai_pipeline.py
-|   +-- geoai_report.py
-|   +-- geoai_qgis_bootstrap.py
-|   +-- geoai_gee_bridge.py
-|   +-- geoai_env_setup.py
-|   +-- geoai.py (CLI)
-+-- icons/                   # Plugin icons
-|   +-- icon.svg
-|   +-- icon.png
-+-- Makefile                 # Build automation
-+-- README.md                # This file
-+-- LICENSE                  # MIT license
-+-- .gitignore
+├── __init__.py              # Plugin entry point (classFactory)
+├── geopilot.py               # Main plugin class (menu, toolbar)
+├── geopilot_dialog.py        # Chat dialog + auto-execution engine
+├── metadata.txt              # QGIS plugin metadata
+├── README.md                 # This file
+├── LICENSE                   # MIT License
+├── Makefile                  # Build automation
+│
+├── providers/                # 🧠 AI Provider System (18 providers)
+│   ├── __init__.py           # Provider registry (all 18 registered)
+│   ├── base.py               # BaseProvider, register_provider()
+│   ├── openai_compat.py      # OpenAI + 13 compatible providers
+│   ├── anthropic_provider.py # Anthropic Claude
+│   ├── google_provider.py    # Google Gemini
+│   ├── baidu_provider.py     # Baidu ERNIE (OAuth)
+│   ├── spark_provider.py     # iFlytek Spark
+│   └── ollama_provider.py    # Local Ollama
+│
+├── scripts/                  # ⚙️ GeoAI Analysis Engine
+│   ├── geoai_data_manager.py    # Data I/O (Shapefile, GeoJSON, GPKG, etc.)
+│   ├── geoai_vector_analysis.py # Buffer, Clip, Union, Spatial Join
+│   ├── geoai_raster_analysis.py # GDAL, SAGA, GRASS raster ops
+│   ├── geoai_remote_sensing.py  # 28 spectral indices, 8 classifiers
+│   ├── geoai_sci_figure.py      # Figure 1-8, Graphical Abstract, Poster
+│   ├── geoai_paper_agent.py     # Journal recommendation, Cover Letter
+│   ├── geoai_pipeline.py        # 6 pre-built analysis workflows
+│   ├── geoai_report.py          # Research report generator
+│   ├── geoai_qgis_bootstrap.py  # QGIS environment initialization
+│   ├── geoai_gee_bridge.py      # Google Earth Engine integration
+│   ├── geoai_env_setup.py       # Environment detection
+│   └── geoai.py                 # CLI interface
+│
+└── icons/                    # 🎨 Plugin icons
+    ├── icon.png
+    └── icon.svg
 ```
 
 ---
 
-## Development
+## 🧠 How Auto-Execution Works
 
-### Build and Install
+The core innovation of GeoPilot is the **code execution pipeline**:
 
-```bash
-make install    # Install plugin to QGIS profile
-make zip        # Create distributable ZIP
-make clean      # Remove cache files
+```mermaid
+flowchart LR
+    A[User: "Buffer by 100m"] --> B[AI generates Python code]
+    B --> C[Code extracted from response]
+    C --> D[QGIS exec\(\) runs the code]
+    D --> E[Layer created, results shown]
+    D --> F[iface.messageBar feedback]
 ```
 
-### Adding a New AI Provider
+1. **Context Gathering**: `build_qgis_context()` collects all layer info, CRS, fields, and available algorithms
+2. **AI Processing**: The LLM generates QGIS Python code based on context and user request
+3. **Code Extraction**: `exec_qgis_code()` extracts ```python blocks from the AI response
+4. **Execution**: Code runs directly in QGIS via `exec()` with full QGIS API access
+5. **Feedback**: Results (new layers, processing output, errors) are displayed in the chat
 
-1. Create a new file in `providers/` (or add to `openai_compat.py` if OpenAI-compatible)
-2. Implement the `BaseProvider` interface with a `chat()` method
-3. Register it in `providers/__init__.py` using `register_provider()`
+---
 
+## 🧪 Scripts API Reference
+
+The analysis engine in `scripts/` provides programmatic access to all GeoPilot capabilities:
+
+| Module | Purpose | Key Functions |
+|--------|---------|--------------|
+| `geoai_vector_analysis` | Vector GIS operations | buffer_layer(), clip_layers(), spatial_join() |
+| `geoai_raster_analysis` | Raster processing | calculate_slope(), reclassify_raster(), contour() |
+| `geoai_remote_sensing` | Remote sensing | calculate_ndvi(), classify_landcover(), detect_change() |
+| `geoai_sci_figure` | SCI figures | create_study_area_map(), create_classification_figure() |
+| `geoai_paper_agent` | Journal matching | recommend_journal(), generate_cover_letter() |
+| `geoai_pipeline` | Workflows | run_forest_disturbance(), run_urban_expansion() |
+| `geoai_report` | Reports | generate_research_report(), generate_thesis_outline() |
+| `geoai_qgis_bootstrap` | QGIS init | init_qgis() |
+| `geoai_gee_bridge` | GEE integration | init_ee(), gee_export() |
+
+---
+
+## 🛠️ Development
+
+### Build & Package
+```bash
+make install    # Install to QGIS profile
+make zip        # Create distributable ZIP
+make clean      # Remove __pycache__
+```
+
+### Adding a New Provider
 ```python
 from .base import BaseProvider, register_provider
 
 class MyProvider(BaseProvider):
     ENV_KEY = "MY_API_KEY"
-    DEFAULT_URL = "https://api.myprovider.com/v1"
+    DEFAULT_URL = "https://api.example.com/v1"
+    
     def chat(self, messages, system_prompt=None, temperature=0.7, max_tokens=4096):
-        # Implement your API call here
-        pass
+        # Implement API call
+        return response_text
 
 register_provider('myprovider', MyProvider,
     display_name='My Provider',
-    models=['model-1', 'model-2'])
+    models=['model-1', 'model-2'],
+    env_key='MY_API_KEY',
+    default_url='https://api.example.com/v1')
 ```
 
 ---
 
-## FAQ
+## ❓ FAQ
 
-### Q: Do I need an internet connection?
-A: Yes, for cloud-based AI providers. For offline use, set up Ollama locally.
+**Q: Does GeoPilot actually execute code in QGIS?**
+A: Yes! Unlike chat-only plugins, GeoPilot runs AI-generated Python code directly in QGIS using `exec()`. Results appear as new layers, processed data, and visual feedback.
 
-### Q: Can I use GeoPilot without an API key?
-A: Yes, use the Ollama provider with local models. No API key required.
+**Q: Do I need internet?**
+A: For cloud AI providers, yes. For offline use, install Ollama locally with models like `llama3.1` or `qwen2.5`.
 
-### Q: Which Chinese AI providers are supported?
-A: DeepSeek, Moonshot (Kimi), Alibaba Qwen (Tongyi), Zhipu GLM, Baidu ERNIE (Wenxin), iFlytek Spark (Xunfei), and 01.AI Yi.
+**Q: Which provider is best for geospatial analysis?**
+A: DeepSeek, Qwen, and Claude generally produce the best QGIS Python code. OpenAI GPT-4o is also excellent.
 
-### Q: How do I get an API key?
+**Q: Can I use it without an API key?**
+A: Yes! Use the Ollama provider with locally installed models — completely free and offline.
 
-| Provider | Sign Up |
-|----------|---------|
-| OpenAI | https://platform.openai.com/api-keys |
-| DeepSeek | https://platform.deepseek.com/api_keys |
-| Moonshot | https://platform.moonshot.cn/console/api-keys |
-| Qwen | https://bailian.console.aliyun.com/ |
-| Zhipu | https://open.bigmodel.cn/usercenter/apikeys |
-| Baidu | https://console.bce.baidu.com/qianfan/ |
-| Spark | https://www.xfyun.cn/service/spark |
-| Yi | https://platform.01.ai/api-keys |
-| Anthropic | https://console.anthropic.com/ |
-| Google | https://aistudio.google.com/apikey |
-
-### Q: The plugin doesn't appear after installation?
-A: Make sure you've restarted QGIS. Check if the plugin is enabled in Plugins > Manage and Install Plugins > Installed tab.
-
-### Q: How do I uninstall?
-A: Go to Plugins > Manage and Install Plugins > Installed, select GeoPilot, and click "Uninstall".
+**Q: How do I get API keys?**
+A: See the [Getting API Keys](#getting-api-keys) table above. Most providers offer free credits for new users.
 
 ---
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License — see [LICENSE](LICENSE).
 
----
-
-## Citation
-
-If you use GeoPilot in your research, please cite:
+## 📝 Citation
 
 ```bibtex
 @software{geopilot2026,
@@ -432,3 +327,7 @@ If you use GeoPilot in your research, please cite:
   url = {https://github.com/xingguangYan/GeoPilot}
 }
 ```
+
+---
+
+⭐ **If you find GeoPilot useful, please star the repo!**
