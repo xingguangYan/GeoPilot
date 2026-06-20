@@ -12,7 +12,7 @@ from qgis.PyQt.QtCore import Qt, QThread, pyqtSignal, QSettings, QUrl
 from qgis.core import QgsProject, QgsLayerTreeLayer, QgsMessageLog
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPTS_DIR = os.path.join(PLUGIN_DIR, scripts)
+SCRIPTS_DIR = os.path.join(PLUGIN_DIR, "scripts")
 
 
 class ApiWorker(QThread):
@@ -103,7 +103,7 @@ Respond in the user\'s language (Chinese or English)."""
 
         # ========== HEADER ==========
         header = QHBoxLayout()
-        title_label = QLabel("<b style="color:#89b4fa;font-size:14pt;">GeoPilot</b>  <span style="color:#6c7086;font-size:9pt;">AI Geospatial Assistant</span>")
+        title_label = QLabel("<b style='color:#89b4fa;font-size:14pt;'>GeoPilot</b>  <span style='color:#6c7086;font-size:9pt;'>AI Geospatial Assistant</span>")
         header.addWidget(title_label)
         header.addStretch()
 
@@ -122,7 +122,7 @@ Respond in the user\'s language (Chinese or English)."""
         help_layout = QVBoxLayout(self.help_panel)
         help_layout.setSpacing(4)
 
-        help_title = QLabel("<b style="color:#a6e3a1;">\U0001f916 Quick Prompt Examples</b> <span style="color:#6c7086;">- Click to auto-fill</span>")
+        help_title = QLabel("<b style='color:#a6e3a1;'>\U0001f916 Quick Prompt Examples</b> <span style='color:#6c7086;'>- Click to auto-fill</span>")
         help_layout.addWidget(help_title)
 
         # Prompt suggestion buttons in a grid
@@ -144,7 +144,7 @@ Respond in the user\'s language (Chinese or English)."""
         help_layout.addLayout(row2)
 
         # Tips text
-        tips = QLabel("<span style="color:#6c7086;font-size:9pt;">\U0001f4a1 Tip: Describe your task naturally. GeoPilot can process vectors, rasters, run analyses, and generate SCI figures.</span>")
+        tips = QLabel("<span style='color:#6c7086;font-size:9pt;'>\U0001f4a1 Tip: Describe your task naturally. GeoPilot can process vectors, rasters, run analyses, and generate SCI figures.</span>")
         help_layout.addWidget(tips)
         self.help_panel.setVisible(False)
         main_layout.addWidget(self.help_panel)
@@ -228,7 +228,7 @@ Respond in the user\'s language (Chinese or English)."""
 
         btn_row.addStretch()
 
-        status_label = QLabel("<span style="color:#6c7086;font-size:9pt;">Enter to send  |  Shift+Enter for new line</span>")
+        status_label = QLabel("<span style='color:#6c7086;font-size:9pt;'>Enter to send  |  Shift+Enter for new line</span>")
         btn_row.addWidget(status_label)
         input_layout_inner.addLayout(btn_row)
 
@@ -256,19 +256,19 @@ Respond in the user\'s language (Chinese or English)."""
     def show_welcome(self):
         """Show welcome message."""
         welcome = (
-            "<div style="text-align:center;padding:30px;">"
-            "<h2 style="color:#89b4fa;">\U0001f30d Welcome to GeoPilot</h2>"
-            "<p style="color:#a6e3a1;font-size:11pt;">Your AI Geospatial Analysis Assistant for QGIS</p>"
-            "<hr style="border-color:#313244;width:60%;">"
-            "<p style="color:#6c7086;font-size:10pt;">""
-            "1. \u2699 Click <b>Provider Settings</b> to configure your AI model<br>"
-            "2. \U0001f4dd Type your task in natural language<br>"
-            "3. \U0001f916 GeoPilot will analyze, process, and generate results<br>"
-            "4. \u2753 Click <b>Help</b> for example prompts""
-            "</p>"
-            "<p style="color:#585b70;font-size:9pt;">""
-            "Supports 18 AI providers \u2022 Vector & Raster Analysis \u2022 Remote Sensing \u2022 SCI Figures""
-            "</p></div>"
+            '<div style="text-align:center;padding:30px;">'
+            '<h2 style="color:#89b4fa;">\U0001f30d Welcome to GeoPilot</h2>'
+            '<p style="color:#a6e3a1;font-size:11pt;">Your AI Geospatial Analysis Assistant for QGIS</p>'
+            '<hr style="border-color:#313244;width:60%;">'
+            '<p style="color:#6c7086;font-size:10pt;">'
+            '1. \u2699 Click <b>Provider Settings</b> to configure your AI model<br>'
+            '2. \U0001f4dd Type your task in natural language<br>'
+            '3. \U0001f916 GeoPilot will analyze, process, and generate results<br>'
+            '4. \u2753 Click <b>Help</b> for example prompts'
+            '</p>'
+            '<p style="color:#585b70;font-size:9pt;">'
+            'Supports 18 AI providers \u2022 Vector & Raster Analysis \u2022 Remote Sensing \u2022 SCI Figures'
+            '</p></div>'
         )
         self.chat_display.setHtml(welcome)
 
@@ -354,16 +354,16 @@ Respond in the user\'s language (Chinese or English)."""
         self.conversation.append({"role": role, "content": content})
 
         if role == "user":
-            prefix = "<div style="background-color:#313244;border-radius:6px;padding:8px 12px;margin:4px 0;"><b style="color:#89b4fa;">\U0001f464 You</b><br>"
+            prefix = "<div style='background-color:#313244;border-radius:6px;padding:8px 12px;margin:4px 0;'><b style='color:#89b4fa;'>\U0001f464 You</b><br>"
         else:
-            prefix = "<div style="background-color:#181825;border-radius:6px;padding:8px 12px;margin:4px 0;"><b style="color:#a6e3a1;">\U0001f916 GeoPilot</b><br>"
+            prefix = "<div style='background-color:#181825;border-radius:6px;padding:8px 12px;margin:4px 0;'><b style='color:#a6e3a1;'>\U0001f916 GeoPilot</b><br>"
 
         escaped = html.escape(content).replace("\n", "<br>")
 
         # Format code blocks
         import re
-        escaped = re.sub(r"`(\w*)\n(.*?)\n`", r"<pre style="background-color:#11111b;color:#cdd6f4;padding:8px;border-radius:4px;font-size:10pt;"><code>\2</code></pre>", escaped, flags=re.DOTALL)
-        escaped = re.sub(r"([^]+)", r"<code style="background-color:#11111b;color:#fab387;padding:1px 4px;border-radius:2px;">\1</code>", escaped)
+        escaped = re.sub(r"`(\w*)\n(.*?)\n`", r"<pre style='background-color:#11111b;color:#cdd6f4;padding:8px;border-radius:4px;font-size:10pt;'><code>\2</code></pre>", escaped, flags=re.DOTALL)
+        escaped = re.sub(r"([^]+)", r"<code style='background-color:#11111b;color:#fab387;padding:1px 4px;border-radius:2px;'>\1</code>", escaped)
 
         self.chat_display.append(prefix + escaped + "</div>")
         self.chat_display.moveCursor(QTextCursor.End)
