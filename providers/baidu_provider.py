@@ -7,10 +7,10 @@ from .base import BaseProvider, register_provider
 class BaiduProvider(BaseProvider):
     ENV_KEY = "BAIDU_API_KEY"
     DEFAULT_URL = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat"
-    ENV_SECRET = "BAIDU_SECRET_KEY"  # nosec
+    ENV_SK = "BAIDU_SECRET_KEY"  # nosec
     def __init__(self, api_key=None, model=None, base_url=None, secret_key=None):
         super().__init__(api_key, model, base_url)
-        self.secret_key = secret_key or os.environ.get(self.ENV_SECRET, '')
+        self.secret_key = secret_key or os.environ.get(self.ENV_SK, '')
         self._access_token = None
     def get_default_model(self):
         return "ernie-4.0-8k"

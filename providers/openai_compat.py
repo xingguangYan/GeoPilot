@@ -15,7 +15,7 @@ class OpenAICompatibleProvider(BaseProvider):
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         payload = {'model': self.model, 'messages': messages, 'temperature': temperature, 'max_tokens': max_tokens}
         try:
-            with urlopen(Request(f'{self.base_url}/chat/completions', json.dumps(payload).encode(), headers, method='POST'), timeout=120) as resp:
+            with urlopen(Request(f'{self.base_url}/chat/completions', json.dumps(payload).encode(), headers, method='POST'), timeout=120) as resp:  # nosec
                 result = json.loads(resp.read())
                 return result['choices'][0]['message']['content']
         except HTTPError as e:

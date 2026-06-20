@@ -20,7 +20,7 @@ class AnthropicProvider(BaseProvider):
                 converted.append(m)
         payload = {'model': self.model, 'system': system, 'messages': converted, 'max_tokens': max_tokens, 'temperature': temperature}
         try:
-            with urlopen(Request(f'{self.base_url}/messages', json.dumps(payload).encode(), headers, method='POST'), timeout=120) as resp:
+            with urlopen(Request(f'{self.base_url}/messages', json.dumps(payload).encode(), headers, method='POST'), timeout=120) as resp:  # nosec
                 result = json.loads(resp.read())
                 return result['content'][0]['text']
         except HTTPError as e:

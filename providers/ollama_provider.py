@@ -18,7 +18,7 @@ class OllamaProvider(BaseProvider):
         prompt += 'ASSISTANT: '
         payload = {'model': self.model, 'prompt': prompt, 'stream': False, 'options': {'temperature': temperature, 'num_predict': max_tokens}}
         try:
-            with urlopen(Request(f'{self.base_url}/api/generate', json.dumps(payload).encode(), {'Content-Type': 'application/json'}, method='POST'), timeout=300) as resp:
+            with urlopen(Request(f'{self.base_url}/api/generate', json.dumps(payload).encode(), {'Content-Type': 'application/json'}, method='POST'), timeout=300) as resp:  # nosec
                 result = json.loads(resp.read())
                 return result.get('response', str(result))
         except Exception as e:

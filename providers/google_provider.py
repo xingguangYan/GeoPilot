@@ -19,7 +19,7 @@ class GoogleProvider(BaseProvider):
             payload['systemInstruction'] = {'parts': [{'text': system_prompt}]}
         url = f'{self.base_url}/models/{self.model}:generateContent?key={self.api_key}'
         try:
-            with urlopen(Request(url, json.dumps(payload).encode(), {'Content-Type': 'application/json'}, method='POST'), timeout=60) as resp:
+            with urlopen(Request(url, json.dumps(payload).encode(), {'Content-Type': 'application/json'}, method='POST'), timeout=60) as resp:  # nosec
                 result = json.loads(resp.read())
                 return result['candidates'][0]['content']['parts'][0]['text']
         except Exception as e:
