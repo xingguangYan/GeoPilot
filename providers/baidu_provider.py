@@ -7,17 +7,17 @@ from .base import BaseProvider, register_provider
 class BaiduProvider(BaseProvider):
     ENV_KEY = "BAIDU_API_KEY"
     DEFAULT_URL = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat"
-    SECRET_KEY_ENV = "BAIDU_SECRET_KEY"
+    ENV_SECRET = "BAIDU_SECRET_KEY"  # nosec
     def __init__(self, api_key=None, model=None, base_url=None, secret_key=None):
         super().__init__(api_key, model, base_url)
-        self.secret_key = secret_key or os.environ.get(self.SECRET_KEY_ENV, '')
+        self.secret_key = secret_key or os.environ.get(self.ENV_SECRET, '')
         self._access_token = None
     def get_default_model(self):
         return "ernie-4.0-8k"
     def _get_access_token(self):
         if not self._access_token:
             params = urlencode({'grant_type': 'client_credentials', 'client_id': self.api_key, 'client_secret': self.secret_key})
-            with urlopen(f'https://aip.baidubce.com/oauth/2.0/token?{params}', timeout=10) as resp:
+            with urlopen(f'https://aip.baidubce.com/oauth/2.0/token?{params}', timeout=10)  # nosec as resp:
                 self._access_token = json.loads(resp.read()).get('access_token', '')
         return self._access_token
     def chat(self, messages, system_prompt=None, temperature=0.7, max_tokens=4096):

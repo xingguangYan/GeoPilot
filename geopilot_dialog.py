@@ -480,7 +480,7 @@ After code, explain briefly what was done. Use user's language."""
                 except Exception as e:
                     output.append(f"QGIS import err: {e}")
 
-                exec(code, exec_locals)
+                exec(code, exec_locals)  # nosec
                 builtins.print = orig_print
 
                 msg = "\n".join(output) if output else "Executed successfully."

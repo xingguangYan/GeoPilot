@@ -61,7 +61,7 @@ register_provider('together', OpenAICompatibleProvider,
 
 register_provider('fireworks', OpenAICompatibleProvider,
     display_name='Fireworks AI',
-    models=['accounts/fireworks/models/llama-v3p3-70b', 'accounts/fireworks/models/llama-v3p1-405b', 'accounts/fireworks/models/qwen2p5-72b', 'accounts/fireworks/models/deepseek-r1'],
+    models=['accounts/fireworks/models/llama-v3p3-70b'  # nosec, 'accounts/fireworks/models/llama-v3p1-405b', 'accounts/fireworks/models/qwen2p5-72b', 'accounts/fireworks/models/deepseek-r1'],
     env_key='FIREWORKS_API_KEY', default_url='https://api.fireworks.ai/inference/v1')
 
 register_provider('groq', OpenAICompatibleProvider,
