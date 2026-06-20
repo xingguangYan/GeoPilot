@@ -3,13 +3,13 @@ import json, os
 
 PROVIDER_REGISTRY = {}
 
-def register_provider(name, provider_class, display_name=None, models=None):
+def register_provider(name, provider_class, display_name=None, models=None, env_key=None, default_url=None):
     PROVIDER_REGISTRY[name] = {
         "class": provider_class,
         "display_name": display_name or name.title(),
         "models": models or [],
-        "env_key": getattr(provider_class, "ENV_KEY", None),
-        "default_url": getattr(provider_class, "DEFAULT_URL", None),
+        "env_key": env_key or getattr(provider_class, "ENV_KEY", None),
+        "default_url": default_url or getattr(provider_class, "DEFAULT_URL", None),
     }
 
 def list_providers():

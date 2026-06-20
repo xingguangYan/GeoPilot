@@ -1,0 +1,8 @@
+def register_provider(name, provider_class, display_name=None, models=None, env_key=None, default_url=None):
+    PROVIDER_REGISTRY[name] = {
+        "class": provider_class,
+        "display_name": display_name or name.title(),
+        "models": models or [],
+        "env_key": env_key or getattr(provider_class, "ENV_KEY", None),
+        "default_url": default_url or getattr(provider_class, "DEFAULT_URL", None),
+    }

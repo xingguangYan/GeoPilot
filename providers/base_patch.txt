@@ -1,0 +1,13 @@
+*** Update File: C:\Users\Administrator\.codex\skills\GeoPilot\providers\base.py
+@@ def register_provider(name, provider_class, display_name=None, models=None): @@
+-def register_provider(name, provider_class, display_name=None, models=None):
++def register_provider(name, provider_class, display_name=None, models=None, **kwargs):
+     PROVIDER_REGISTRY[name] = {
+         "class": provider_class,
+         "display_name": display_name or name.title(),
+         "models": models or [],
+-        "env_key": getattr(provider_class, "ENV_KEY", None),
+-        "default_url": getattr(provider_class, "DEFAULT_URL", None),
++        "env_key": kwargs.get('env_key') or getattr(provider_class, "ENV_KEY", None),
++        "default_url": kwargs.get('default_url') or getattr(provider_class, "DEFAULT_URL", None),
+     }
