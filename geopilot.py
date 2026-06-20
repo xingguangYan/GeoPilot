@@ -1,11 +1,8 @@
 """GeoPilot - Main QGIS Plugin Class"""
-import os, sys, json
 
 from qgis.core import QgsApplication, QgsMessageLog
-from qgis.gui import QgisInterface
 from qgis.PyQt.QtWidgets import QAction, QToolBar
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtCore import QObject, QTranslator, QCoreApplication
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.join(PLUGIN_DIR, "scripts")
@@ -52,6 +49,7 @@ class GeoPilotPlugin:
         """Open the GeoPilot chat dialog."""
         if not self.dialog:
             from .geopilot_dialog import GeoPilotDialog
+
             self.dialog = GeoPilotDialog(self.iface, self.plugin_dir)
         self.dialog.show()
         self.dialog.raise_()

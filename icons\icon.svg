@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <circle cx="32" cy="32" r="30" fill="#1a5632" stroke="#41B95C" stroke-width="2"/>
+  <path d="M32 16c-8 0-16 6-16 16s8 16 16 16 16-6 16-16-8-16-16-16z" fill="white" opacity="0.3"/>
+  <path d="M32 18C25 18 20 24 20 32s5 14 12 14" fill="none" stroke="white" stroke-width="2.5" opacity="0.6"/>
+  <circle cx="32" cy="32" r="6" fill="white" opacity="0.9"/>
+  <path d="M44 14c0 0-4 10-4 18s4 18 4 18" fill="none" stroke="#89b4fa" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="44" cy="32" r="3" fill="#89b4fa" opacity="0.8"/>
+  <text x="32" y="56" font-family="Arial" font-size="7" fill="white" text-anchor="middle" font-weight="bold">GP</text>
+</svg>
