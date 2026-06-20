@@ -1,19 +1,19 @@
-[general]
+﻿[general]
 name=GeoPilot
-description=AI-powered geospatial analysis assistant with multi-model API support
-about=GeoPilot is an AI copilot for QGIS that enables natural-language geospatial data processing, remote sensing analysis, and SCI paper figure generation. It supports OpenAI GPT, Anthropic Claude, Google Gemini, and local Ollama models.
+description=AI-powered geospatial analysis assistant that executes QGIS operations through natural language
+about=GeoPilot is an AI copilot for QGIS that lets you control QGIS through natural language. Describe tasks in plain Chinese or English - it automatically generates and executes QGIS Python code to process data, run analyses, and create publication-ready figures. Supports 18 AI providers including OpenAI, DeepSeek, Claude, Gemini, and local Ollama models.
 category=AI, Analysis, RemoteSensing
-version=1.0.0
+version=1.1.0
 qgisMinimumVersion=3.30
 qgisMaximumVersion=3.99
 supportsQt6=yes
 author=GeoPilot Team
-email=geopilot@example.com
+email=xingguangyjs@outlook.com
 icon=icons/icon.png
 homepage=https://github.com/xingguangYan/GeoPilot
 tracker=https://github.com/xingguangYan/GeoPilot/issues
 repository=https://github.com/xingguangYan/GeoPilot
-tags=AI, remote sensing, deep learning, land cover, classification, change detection, NDVI, SCI figure, chat
+tags=AI, remote sensing, deep learning, land cover, classification, change detection, NDVI, SCI figure, chat, QGIS, geospatial, natural language
 hasProcessingProvider=no
 experimental=False
-changelog=
+changelog=v1.1.0: Auto-execute QGIS code, 18 AI providers, redesigned GUI, bug fixes
