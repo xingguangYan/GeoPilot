@@ -1,4 +1,4 @@
-﻿[general]
+[general]
 name=GeoPilot
 description=AI-powered geospatial analysis assistant that executes QGIS operations through natural language
 about=GeoPilot is an AI copilot for QGIS that lets you control QGIS through natural language. Describe tasks in plain Chinese or English - it automatically generates and executes QGIS Python code to process data, run analyses, and create publication-ready figures. Supports 18 AI providers including OpenAI, DeepSeek, Claude, Gemini, and local Ollama models.
