@@ -132,12 +132,55 @@ class RasterAnalysis:
         else:
             locals_dict = {"A": data[band-1] if data.ndim == 3 else data}
 
-        result = eval(formula, {"__builtins__": {}}, {
-            **locals_dict,
-            "np": np, "sin": np.sin, "cos": np.cos,
-            "sqrt": np.sqrt, "exp": np.exp, "log": np.log,
-            "where": np.where, "nanmean": np.nanmean,
-        })
+        # Safe AST-based expression evaluator (no eval())
+        import ast as _ast
+        _ALLOWED_NAMES = {"sin", "cos", "sqrt", "exp", "log", "where", "nanmean"}
+        _SAFE_OPS = {
+            _ast.Add: lambda a, b: a + b, _ast.Sub: lambda a, b: a - b,
+            _ast.Mult: lambda a, b: a * b, _ast.Div: lambda a, b: a / b,
+            _ast.Pow: lambda a, b: a ** b, _ast.Mod: lambda a, b: a % b,
+            _ast.FloorDiv: lambda a, b: a // b,
+            _ast.UAdd: lambda a: +a, _ast.USub: lambda a: -a, _ast.Not: lambda a: not a,
+        }
+        def _safe_eval(node):
+            if isinstance(node, _ast.Expression):
+                return _safe_eval(node.body)
+            if isinstance(node, _ast.Constant):
+                return node.value
+            if isinstance(node, _ast.Name):
+                name = node.id
+                if name in locals_dict: return locals_dict[name]
+                if name in _ALLOWED_NAMES: return getattr(np, name, None)
+                if name == "np": return np
+                raise ValueError(f"Unknown variable: {name}")
+            if isinstance(node, _ast.BinOp):
+                op = _SAFE_OPS.get(type(node.op))
+                if op is None: raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
+                return op(_safe_eval(node.left), _safe_eval(node.right))
+            if isinstance(node, _ast.UnaryOp):
+                op = _SAFE_OPS.get(type(node.op))
+                if op is None: raise ValueError(f"Unsupported unary op: {type(node.op).__name__}")
+                return op(_safe_eval(node.operand))
+            if isinstance(node, _ast.Attribute):
+                value = _safe_eval(node.value)
+                return getattr(value, node.attr)
+            if isinstance(node, _ast.Call):
+                func = _safe_eval(node.func)
+                args = [_safe_eval(a) for a in node.args]
+                return func(*args)
+            if isinstance(node, _ast.Subscript):
+                return _safe_eval(node.value)[_safe_eval(node.slice)]
+            if isinstance(node, _ast.Slice):
+                return slice(_safe_eval(node.lower) if node.lower else None,
+                             _safe_eval(node.upper) if node.upper else None,
+                             _safe_eval(node.step) if node.step else None)
+            if isinstance(node, _ast.Tuple):
+                return tuple(_safe_eval(e) for e in node.elts)
+            if isinstance(node, _ast.List):
+                return [_safe_eval(e) for e in node.elts]
+            raise ValueError(f"Unsupported expression: {type(node).__name__}")
+        _parsed = _ast.parse(formula, mode='eval')
+        result = _safe_eval(_parsed.body)
         return result
 
     def reclassify(self, data, bins, values, nodata=np.nan):
