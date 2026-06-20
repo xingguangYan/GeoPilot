@@ -124,7 +124,7 @@ class GeoPilotDialog(QDialog):
         """Update model list when provider changes."""
         self.model_combo.clear()
         try:
-            from providers import list_providers
+            from .providers import list_providers
             registry = list_providers()
             entry = registry.get(provider, {})
             models = entry.get("models", ["default"])
@@ -164,7 +164,7 @@ class GeoPilotDialog(QDialog):
     def update_provider_list(self):
         """Populate provider list from registry."""
         try:
-            from providers import list_providers
+            from .providers import list_providers
             registry = list_providers()
             for name, info in registry.items():
                 display = info.get("display_name", name)
@@ -174,7 +174,7 @@ class GeoPilotDialog(QDialog):
 
     def get_provider(self):
         """Get current API provider instance."""
-        from providers import get_provider
+        from .providers import get_provider
         name = self.provider_combo.currentData()
         if not name:
             name = self.provider_combo.currentText().split("(")[-1].rstrip(")") if "(" in self.provider_combo.currentText() else self.provider_combo.currentText()

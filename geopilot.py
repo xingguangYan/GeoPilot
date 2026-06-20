@@ -51,7 +51,7 @@ class GeoPilotPlugin:
     def show_dialog(self):
         """Open the GeoPilot chat dialog."""
         if not self.dialog:
-            from geopilot_dialog import GeoPilotDialog
+            from .geopilot_dialog import GeoPilotDialog
             self.dialog = GeoPilotDialog(self.iface, self.plugin_dir)
         self.dialog.show()
         self.dialog.raise_()
