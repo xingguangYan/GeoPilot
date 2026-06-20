@@ -362,8 +362,8 @@ Respond in the user\'s language (Chinese or English)."""
 
         # Format code blocks
         import re
-        escaped = re.sub(r"`(\w*)\n(.*?)\n`", r"<pre style='background-color:#11111b;color:#cdd6f4;padding:8px;border-radius:4px;font-size:10pt;'><code>\2</code></pre>", escaped, flags=re.DOTALL)
-        escaped = re.sub(r"([^]+)", r"<code style='background-color:#11111b;color:#fab387;padding:1px 4px;border-radius:2px;'>\1</code>", escaped)
+        escaped = re.sub(r"```(\w*)\n(.*?)\n```", r"<pre style='background-color:#11111b;color:#cdd6f4;padding:8px;border-radius:4px;font-size:10pt;'><code>\2</code></pre>", escaped, flags=re.DOTALL)
+        escaped = re.sub(r"`([^`]+)`", r"<code style='background-color:#11111b;color:#fab387;padding:1px 4px;border-radius:2px;'>\1</code>", escaped)
 
         self.chat_display.append(prefix + escaped + "</div>")
         self.chat_display.moveCursor(QTextCursor.End)
