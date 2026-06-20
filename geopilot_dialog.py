@@ -210,8 +210,7 @@ Respond in the user\'s language (Chinese or English)."""
         input_layout_inner.setContentsMargins(4, 4, 4, 4)
 
         self.input_field = QTextEdit()
-        self.input_field.setPlaceholderText("Describe your geospatial task in natural language..."""
-"""e.g., "Calculate NDVI from the current Landsat image and create a classified map"""")
+        self.input_field.setPlaceholderText("Describe your geospatial task\ne.g. Calculate NDVI")
         self.input_field.setMaximumHeight(70)
         self.input_field.setStyleSheet("QTextEdit { background-color: #1e1e2e; border: 1px solid #313244; border-radius: 4px; padding: 6px; font-size: 11pt; } QTextEdit:focus { border-color: #89b4fa; }")
         input_layout_inner.addWidget(self.input_field)
