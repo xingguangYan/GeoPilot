@@ -1,7 +1,10 @@
 """GeoPilot - Main QGIS Plugin Class"""
 
-from qgis.core import QgsApplication, QgsMessageLog
-from qgis.PyQt.QtWidgets import QAction, QToolBar
+import os
+import sys
+
+from qgis.core import QgsApplication
+from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtGui import QIcon
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))

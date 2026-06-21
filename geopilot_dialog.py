@@ -1,6 +1,7 @@
 """GeoPilot Chat Dialog - Natural-Language Geospatial Interface"""
 
-import os, sys, json, traceback, html
+import os
+import html
 
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -17,11 +18,14 @@ from qgis.PyQt.QtWidgets import (
     QToolButton,
 )
 
-from qgis.PyQt.QtGui import QTextCursor, QFont, QIcon, QPixmap
+from qgis.PyQt.QtGui import QTextCursor
 
-from qgis.PyQt.QtCore import Qt, QThread, pyqtSignal, QSettings, QUrl
+from qgis.PyQt.QtCore import Qt, QThread, pyqtSignal, QSettings
 
-from qgis.core import QgsProject, QgsLayerTreeLayer, QgsMessageLog
+from qgis.core import QgsProject, QgsMessageLog
+
+PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
+
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -896,8 +900,6 @@ After code, explain briefly what was done. Use user's language."""
                         pass
 
             except Exception as e:
-
-                import traceback
 
                 tb = traceback.format_exc()
 
