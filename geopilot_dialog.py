@@ -2,6 +2,7 @@
 
 import os
 import html
+import traceback
 
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -23,9 +24,6 @@ from qgis.PyQt.QtGui import QTextCursor
 from qgis.PyQt.QtCore import Qt, QThread, pyqtSignal, QSettings
 
 from qgis.core import QgsProject, QgsMessageLog
-
-PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -589,8 +587,6 @@ After code, explain briefly what was done. Use user's language."""
 
         try:
 
-            from .providers import list_providers
-
             registry = list_providers()
 
             for name, info in registry.items():
@@ -643,8 +639,6 @@ After code, explain briefly what was done. Use user's language."""
 
         # Format code blocks
 
-        import re
-
         escaped = re.sub(
             r"```(\w*)\n(.*?)\n```",
             r"<pre style='background-color:#11111b;color:#cdd6f4;padding:8px;border-radius:4px;font-size:10pt;'><code>\2</code></pre>",
@@ -664,38 +658,34 @@ After code, explain briefly what was done. Use user's language."""
 
     def build_qgis_context(self):
 
-        import os
-
         info = []
 
         try:
-
-            from qgis.core import QgsProject, QgsMessageLog
 
             layers = QgsProject.instance().layerTreeRoot().findLayers()
 
             info.append(f"Layers in project: {len(layers)}")
 
-            for l in layers[:15]:
+            for layer_node in layers[:15]:
 
-                layer = l.layer()
+                layer = layer_node.layer()
 
                 try:
                     crs = layer.crs().authid()
 
-                except:
+                except Exception:
                     crs = "?"
 
                 try:
-                    ext = layer.extent().toString()
+                    _ = layer.extent().toString()
 
-                except:
+                except Exception:
                     ext = "?"
 
                 try:
                     fc = layer.featureCount()
 
-                except:
+                except Exception:
                     fc = "?"
 
                 info.append(f"  [{layer.name()}] type={layer.type().__class__.__name__} CRS={crs} features={fc}")
@@ -810,8 +800,6 @@ After code, explain briefly what was done. Use user's language."""
 
         self.add_message("assistant", response)
 
-        import re
-
         blocks = re.findall(r"```python\n(.*?)\n```", response, re.DOTALL)
 
         if blocks:
@@ -843,13 +831,7 @@ After code, explain briefly what was done. Use user's language."""
 
                 try:
 
-                    from qgis.core import (
-                        QgsProject,
-                        QgsVectorLayer,
-                        QgsRasterLayer,
-                        QgsMessageLog,
-                        QgsProcessingFeedback,
-                    )
+                    from qgis.core import QgsVectorLayer, QgsRasterLayer, QgsProcessingFeedback
 
                     exec_locals["QgsProject"] = QgsProject
 
@@ -873,8 +855,6 @@ After code, explain briefly what was done. Use user's language."""
 
                     exec_locals["processing"] = processing
 
-                    from qgis.core import QgsApplication
-
                     exec_locals["QgsApplication"] = QgsApplication
 
                 except Exception as e:
@@ -887,15 +867,15 @@ After code, explain briefly what was done. Use user's language."""
 
                 msg = "\n".join(output) if output else "Executed successfully."
 
-                self.add_message("assistant", f"\u2705 Block {i+1}: {msg}")
+                self.add_message("assistant", f"\u2705 Block {i + 1}: {msg}")
 
                 if self.iface:
 
                     try:
 
-                        self.iface.messageBar().pushMessage("GeoPilot", f"Block {i+1} executed", level=0, duration=3)
+                        self.iface.messageBar().pushMessage("GeoPilot", f"Block {i + 1} executed", level=0, duration=3)
 
-                    except:
+                    except Exception:
 
                         pass
 
@@ -903,7 +883,7 @@ After code, explain briefly what was done. Use user's language."""
 
                 tb = traceback.format_exc()
 
-                self.add_message("assistant", f"\u274c Block {i+1}: {str(e)}\n```\n{tb[-500:]}\n```")
+                self.add_message("assistant", f"\u274c Block {i + 1}: {str(e)}\n```\n{tb[-500:]}\n```")
 
     def on_error(self, error):
         """Handle API error."""
