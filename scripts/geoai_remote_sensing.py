@@ -1,20 +1,18 @@
-﻿"""
+"""
 geoai_remote_sensing.py - Remote Sensing Analysis Toolkit
 
 Covers: indices computation, supervised/unsupervised classification,
 time series analysis, change detection
 """
 
-import numpy as np
-import pandas as pd
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score, train_test_split
-from sklearn.metrics import (accuracy_score, cohen_kappa_score,
-                             confusion_matrix, classification_report)
+from sklearn.metrics import accuracy_score, cohen_kappa_score, confusion_matrix, classification_report
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -24,43 +22,53 @@ class RemoteSensing:
     # Spectral index formulas
     INDICES = {
         # Vegetation
-        "NDVI":  lambda B: (B["N"] - B["R"]) / (B["N"] + B["R"] + 1e-10),
-        "EVI":   lambda B: 2.5 * (B["N"] - B["R"]) / (B["N"] + 6*B["R"] - 7.5*B.get("B", 0) + 1 + 1e-10),
-        "EVI2":  lambda B: 2.5 * (B["N"] - B["R"]) / (B["N"] + 2.4*B["R"] + 1 + 1e-10),
-        "SAVI":  lambda B: (B["N"] - B["R"]) * 1.5 / (B["N"] + B["R"] + 0.5 + 1e-10),
+        "NDVI": lambda B: (B["N"] - B["R"]) / (B["N"] + B["R"] + 1e-10),
+        "EVI": lambda B: 2.5 * (B["N"] - B["R"]) / (B["N"] + 6 * B["R"] - 7.5 * B.get("B", 0) + 1 + 1e-10),
+        "EVI2": lambda B: 2.5 * (B["N"] - B["R"]) / (B["N"] + 2.4 * B["R"] + 1 + 1e-10),
+        "SAVI": lambda B: (B["N"] - B["R"]) * 1.5 / (B["N"] + B["R"] + 0.5 + 1e-10),
         "OSAVI": lambda B: (B["N"] - B["R"]) / (B["N"] + B["R"] + 0.16 + 1e-10),
-        "MSAVI2": lambda B: (2*B["N"]+1 - np.sqrt((2*B["N"]+1)**2 - 8*(B["N"]-B["R"]))) / 2,
-        "ARVI":  lambda B: (B["N"] - (2*B["R"] - B.get("B",0))) / (B["N"] + (2*B["R"] - B.get("B",0)) + 1e-10),
-        "GCVI":  lambda B: (B["N"] / B.get("G", 1)) - 1,
-        "NDRE":  lambda B: (B["N"] - B.get("RE1", 0)) / (B["N"] + B.get("RE1", 0) + 1e-10),
-        "CVI":   lambda B: B["N"] * B["R"] / (B.get("G", 1)**2 + 1e-10),
-        "RVI":   lambda B: B["N"] / (B["R"] + 1e-10),
-        "DVI":   lambda B: B["N"] - B["R"],
+        "MSAVI2": lambda B: (2 * B["N"] + 1 - np.sqrt((2 * B["N"] + 1) ** 2 - 8 * (B["N"] - B["R"]))) / 2,
+        "ARVI": lambda B: (B["N"] - (2 * B["R"] - B.get("B", 0))) / (B["N"] + (2 * B["R"] - B.get("B", 0)) + 1e-10),
+        "GCVI": lambda B: (B["N"] / B.get("G", 1)) - 1,
+        "NDRE": lambda B: (B["N"] - B.get("RE1", 0)) / (B["N"] + B.get("RE1", 0) + 1e-10),
+        "CVI": lambda B: B["N"] * B["R"] / (B.get("G", 1) ** 2 + 1e-10),
+        "RVI": lambda B: B["N"] / (B["R"] + 1e-10),
+        "DVI": lambda B: B["N"] - B["R"],
         # Water
-        "NDWI":  lambda B: (B.get("G", 0) - B["N"]) / (B.get("G", 0) + B["N"] + 1e-10),
+        "NDWI": lambda B: (B.get("G", 0) - B["N"]) / (B.get("G", 0) + B["N"] + 1e-10),
         "MNDWI": lambda B: (B.get("G", 0) - B.get("S1", 0)) / (B.get("G", 0) + B.get("S1", 0) + 1e-10),
-        "AWEI_sh": lambda B: B.get("B", 0) + 2.5*B.get("G", 0) - 1.5*(B["N"]+B.get("S1",0)) - 0.25*B.get("S2", 0),
-        "AWEI_nsh": lambda B: 4*(B.get("G",0)-B.get("S1",0)) - (0.25*B["N"]+2.75*B.get("S2",0)),
-        "WRI":   lambda B: (B.get("G",0)+B["R"]) / (B["N"]+B.get("S1",0)+1e-10),
+        "AWEI_sh": lambda B: B.get("B", 0)
+        + 2.5 * B.get("G", 0)
+        - 1.5 * (B["N"] + B.get("S1", 0))
+        - 0.25 * B.get("S2", 0),
+        "AWEI_nsh": lambda B: 4 * (B.get("G", 0) - B.get("S1", 0)) - (0.25 * B["N"] + 2.75 * B.get("S2", 0)),
+        "WRI": lambda B: (B.get("G", 0) + B["R"]) / (B["N"] + B.get("S1", 0) + 1e-10),
         # Built-up
-        "NDBI":  lambda B: (B.get("S1", 0) - B["N"]) / (B.get("S1", 0) + B["N"] + 1e-10),
-        "BUI":   lambda B: ((B.get("S1",0)-B["N"])/(B.get("S1",0)+B["N"]+1e-10)) - ((B["N"]-B["R"])/(B["N"]+B["R"]+1e-10)),
-        "IBI":   lambda B: ((2*B.get("S1",0)/(B.get("S1",0)+B["N"]+1e-10) -
-                            (B["N"]/(B["N"]+B["R"]+1e-10) + B.get("G",0)/(B.get("G",0)+B.get("S1",0)+1e-10))) /
-                           (2*B.get("S1",0)/(B.get("S1",0)+B["N"]+1e-10) +
-                            (B["N"]/(B["N"]+B["R"]+1e-10) + B.get("G",0)/(B.get("G",0)+B.get("S1",0)+1e-10)))),
+        "NDBI": lambda B: (B.get("S1", 0) - B["N"]) / (B.get("S1", 0) + B["N"] + 1e-10),
+        "BUI": lambda B: ((B.get("S1", 0) - B["N"]) / (B.get("S1", 0) + B["N"] + 1e-10))
+        - ((B["N"] - B["R"]) / (B["N"] + B["R"] + 1e-10)),
+        "IBI": lambda B: (
+            (
+                2 * B.get("S1", 0) / (B.get("S1", 0) + B["N"] + 1e-10)
+                - (B["N"] / (B["N"] + B["R"] + 1e-10) + B.get("G", 0) / (B.get("G", 0) + B.get("S1", 0) + 1e-10))
+            )
+            / (
+                2 * B.get("S1", 0) / (B.get("S1", 0) + B["N"] + 1e-10)
+                + (B["N"] / (B["N"] + B["R"] + 1e-10) + B.get("G", 0) / (B.get("G", 0) + B.get("S1", 0) + 1e-10))
+            )
+        ),
         # Burn
-        "NBR":   lambda B: (B["N"] - B.get("S2", 0)) / (B["N"] + B.get("S2", 0) + 1e-10),
-        "dNBR":  lambda B_pre, B_post: B_post - B_pre,
-        "BAI":   lambda B: 1 / ((0.1 - B["R"])**2 + (0.06 - B["N"])**2 + 1e-10),
+        "NBR": lambda B: (B["N"] - B.get("S2", 0)) / (B["N"] + B.get("S2", 0) + 1e-10),
+        "dNBR": lambda B_pre, B_post: B_post - B_pre,
+        "BAI": lambda B: 1 / ((0.1 - B["R"]) ** 2 + (0.06 - B["N"]) ** 2 + 1e-10),
         # Moisture
-        "NDMI":  lambda B: (B["N"] - B.get("S1", 0)) / (B["N"] + B.get("S1", 0) + 1e-10),
-        "MSI":   lambda B: B.get("S1", 0) / (B["N"] + 1e-10),
+        "NDMI": lambda B: (B["N"] - B.get("S1", 0)) / (B["N"] + B.get("S1", 0) + 1e-10),
+        "MSI": lambda B: B.get("S1", 0) / (B["N"] + 1e-10),
         # Snow
-        "NDSI":  lambda B: (B.get("G",0) - B.get("S1",0)) / (B.get("G",0) + B.get("S1",0) + 1e-10),
+        "NDSI": lambda B: (B.get("G", 0) - B.get("S1", 0)) / (B.get("G", 0) + B.get("S1", 0) + 1e-10),
         # Soil
-        "BI":    lambda B: np.sqrt((B["R"]**2 + B.get("G",0)**2 + B["N"]**2) / 3),
-        "CI":    lambda B: (B["R"] - B.get("G",0)) / (B["R"] + B.get("G",0) + 1e-10),
+        "BI": lambda B: np.sqrt((B["R"] ** 2 + B.get("G", 0) ** 2 + B["N"] ** 2) / 3),
+        "CI": lambda B: (B["R"] - B.get("G", 0)) / (B["R"] + B.get("G", 0) + 1e-10),
     }
 
     def __init__(self):
@@ -73,8 +81,7 @@ class RemoteSensing:
                  "S1": swir1, "S2": swir2, "RE1": rededge1}
         """
         if index_name not in self.INDICES:
-            raise ValueError(f"Unknown index: {index_name}. "
-                           f"Available: {list(self.INDICES.keys())}")
+            raise ValueError(f"Unknown index: {index_name}. " f"Available: {list(self.INDICES.keys())}")
         return self.INDICES[index_name](bands)
 
     def compute_multiple_indices(self, bands, index_names):
@@ -98,7 +105,6 @@ class RemoteSensing:
         """Extract training data from raster stack using ROI polygons."""
         import rasterio
         from rasterio.mask import mask as rio_mask
-        from geopandas import GeoDataFrame
 
         samples = []
         if field_name:
@@ -128,6 +134,7 @@ class RemoteSensing:
     def sample_raster(self, raster_path, n_samples=1000, seed=42):
         """Random sampling of raster values."""
         import rasterio
+
         rs = np.random.RandomState(seed)
 
         with rasterio.open(raster_path) as src:
@@ -161,8 +168,7 @@ class RemoteSensing:
         }
 
         if algorithm not in algos:
-            raise ValueError(f"Unknown algorithm: {algorithm}. "
-                           f"Available: {list(algos.keys())}")
+            raise ValueError(f"Unknown algorithm: {algorithm}. " f"Available: {list(algos.keys())}")
 
         algo_class = algos[algorithm]
         if callable(algo_class) and algorithm in ("xgb", "lgbm", "catboost"):
@@ -179,9 +185,7 @@ class RemoteSensing:
         """Train a classifier and return performance metrics."""
         clf = self._get_classifier(algorithm, **params)
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=42, stratify=y
-        )
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42, stratify=y)
 
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
@@ -190,8 +194,7 @@ class RemoteSensing:
             "algorithm": algorithm,
             "accuracy": float(accuracy_score(y_test, y_pred)),
             "kappa": float(cohen_kappa_score(y_test, y_pred)),
-            "classification_report": classification_report(y_test, y_pred,
-                                                          output_dict=True),
+            "classification_report": classification_report(y_test, y_pred, output_dict=True),
             "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
             "n_classes": len(np.unique(y)),
             "n_features": X.shape[1],
@@ -220,12 +223,7 @@ class RemoteSensing:
         """Cross-validate classification performance."""
         clf = self._get_classifier(algorithm, **params)
         scores = cross_val_score(clf, X, y, cv=cv, scoring="accuracy")
-        return {
-            "scores": scores.tolist(),
-            "mean": float(scores.mean()),
-            "std": float(scores.std()),
-            "cv_folds": cv
-        }
+        return {"scores": scores.tolist(), "mean": float(scores.mean()), "std": float(scores.std()), "cv_folds": cv}
 
     def feature_importance(self, algorithm="rf"):
         """Get feature importance from trained model."""
@@ -257,15 +255,12 @@ class RemoteSensing:
         """Change Vector Analysis."""
         diff = bands2 - bands1
         magnitude = np.sqrt(np.sum(diff**2, axis=0))
-        angle = np.arctan2(diff[1] if diff.shape[0] > 1 else diff[0],
-                          diff[0])
+        angle = np.arctan2(diff[1] if diff.shape[0] > 1 else diff[0], diff[0])
         return magnitude, angle
 
-    def post_classification_comparison(self, class1, class2,
-                                       class_names=None):
+    def post_classification_comparison(self, class1, class2, class_names=None):
         """Post-classification change detection."""
-        change_matrix = np.zeros((class1.max()+1, class2.max()+1),
-                                dtype=np.int64)
+        change_matrix = np.zeros((class1.max() + 1, class2.max() + 1), dtype=np.int64)
         for i in range(class1.shape[0]):
             for j in range(class1.shape[1]):
                 c1 = int(class1[i, j])
@@ -288,7 +283,7 @@ class RemoteSensing:
             "unchanged": int(unchanged),
             "changed": int(changed),
             "change_percentage": float(changed / total * 100),
-            "change_matrix": change_matrix.tolist()
+            "change_matrix": change_matrix.tolist(),
         }
 
         return change_map, stats
@@ -306,18 +301,17 @@ class RemoteSensing:
 
         tau, p_value = kendalltau(np.arange(n), series)
         S = 0
-        for i in range(n-1):
-            for j in range(i+1, n):
+        for i in range(n - 1):
+            for j in range(i + 1, n):
                 S += np.sign(series[j] - series[i])
 
         # Variance
         ties = pd.Series(series).value_counts()
-        variance = n * (n-1) * (2*n+5) / 18
-        variance -= np.sum(ties * (ties-1) * (2*ties+5)) / 18
+        variance = n * (n - 1) * (2 * n + 5) / 18
+        variance -= np.sum(ties * (ties - 1) * (2 * ties + 5)) / 18
 
         if variance > 0:
-            Z = (S - 1) / math.sqrt(variance) if S > 0 else \
-                (S + 1) / math.sqrt(variance) if S < 0 else 0
+            Z = (S - 1) / math.sqrt(variance) if S > 0 else (S + 1) / math.sqrt(variance) if S < 0 else 0
             p_value_norm = 2 * (1 - norm.cdf(abs(Z)))
         else:
             Z = 0
@@ -329,29 +323,32 @@ class RemoteSensing:
             "p_value": float(p_value),
             "p_value_normal": float(p_value_norm),
             "Z_score": float(Z),
-            "trend": "increasing" if S > 0 and p_value < 0.05 else
-                     "decreasing" if S < 0 and p_value < 0.05 else
-                     "no significant trend"
+            "trend": (
+                "increasing"
+                if S > 0 and p_value < 0.05
+                else "decreasing" if S < 0 and p_value < 0.05 else "no significant trend"
+            ),
         }
 
     def sen_slope(self, series):
         """Sen"s slope estimator."""
         n = len(series)
         slopes = []
-        for i in range(n-1):
-            for j in range(i+1, n):
+        for i in range(n - 1):
+            for j in range(i + 1, n):
                 slopes.append((series[j] - series[i]) / (j - i))
         return float(np.median(slopes))
 
     def theil_sen_regression(self, x, y):
         """Theil-Sen robust regression."""
         from sklearn.linear_model import TheilSenRegressor
+
         model = TheilSenRegressor(random_state=42)
         model.fit(x.reshape(-1, 1), y)
         return {
             "slope": float(model.coef_[0]),
             "intercept": float(model.intercept_),
-            "predict": model.predict(x.reshape(-1, 1))
+            "predict": model.predict(x.reshape(-1, 1)),
         }
 
     def breakpoint_detection(self, series, min_segment=3):
@@ -371,19 +368,14 @@ class RemoteSensing:
 
             z1 = np.polyfit(x1, y1, 1)
             z2 = np.polyfit(x2, y2, 1)
-            rss = np.sum((y1 - np.polyval(z1, x1))**2) + \
-                  np.sum((y2 - np.polyval(z2, x2))**2)
+            rss = np.sum((y1 - np.polyval(z1, x1)) ** 2) + np.sum((y2 - np.polyval(z2, x2)) ** 2)
 
             if rss < best_rss:
                 best_rss = rss
                 best_bk = bk
 
         if best_bk:
-            return {
-                "breakpoint": int(best_bk),
-                "segments": 2,
-                "rss": float(best_rss)
-            }
+            return {"breakpoint": int(best_bk), "segments": 2, "rss": float(best_rss)}
         return {"breakpoint": None, "segments": 1}
 
 

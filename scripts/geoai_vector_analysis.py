@@ -1,18 +1,15 @@
-﻿"""
+"""
 geoai_vector_analysis.py - Vector Analysis Toolkit
 
 Provides access to all major vector analysis operations using
 geopandas, shapely, and QGIS processing backend when available.
 """
 
-import numpy as np
-import pandas as pd
-import geopandas as gpd
-from shapely.ops import unary_union, voronoi_diagram
+from shapely.ops import unary_union
 from shapely.geometry import Point, MultiPoint, Polygon
 from scipy.spatial import Voronoi
-from scipy import stats
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -22,8 +19,7 @@ class VectorAnalysis:
     def __init__(self, data_manager=None):
         self.dm = data_manager
 
-    def buffer(self, gdf, distance, resolution=16, dissolve=False,
-               cap_style="round", join_style="round"):
+    def buffer(self, gdf, distance, resolution=16, dissolve=False, cap_style="round", join_style="round"):
         """Create buffers around features."""
         cap_map = {"round": 1, "flat": 2, "square": 3}
         join_map = {"round": 1, "mitre": 2, "bevel": 3}
@@ -32,16 +28,10 @@ class VectorAnalysis:
         join = join_map.get(join_style, 1)
 
         buffered = gdf.copy()
-        buffered["geometry"] = gdf.geometry.buffer(
-            distance, resolution=resolution,
-            cap_style=cap, join_style=join
-        )
+        buffered["geometry"] = gdf.geometry.buffer(distance, resolution=resolution, cap_style=cap, join_style=join)
 
         if dissolve:
-            dissolved = gpd.GeoDataFrame(
-                {"geometry": [unary_union(buffered.geometry)]},
-                crs=gdf.crs
-            )
+            dissolved = gpd.GeoDataFrame({"geometry": [unary_union(buffered.geometry)]}, crs=gdf.crs)
             return dissolved
 
         return buffered
@@ -82,43 +72,38 @@ class VectorAnalysis:
             dissolved = gdf.dissolve()
         return dissolved.reset_index()
 
-    def spatial_join(self, target_gdf, join_gdf, how="left",
-                     predicate="intersects", max_distance=None):
+    def spatial_join(self, target_gdf, join_gdf, how="left", predicate="intersects", max_distance=None):
         """Perform spatial join between two layers."""
         if max_distance:
-            return gpd.sjoin_nearest(
-                target_gdf, join_gdf, how=how,
-                max_distance=max_distance
-            )
+            return gpd.sjoin_nearest(target_gdf, join_gdf, how=how, max_distance=max_distance)
         return gpd.sjoin(target_gdf, join_gdf, how=how, predicate=predicate)
 
-    def select_by_location(self, target_gdf, select_gdf,
-                           predicate="intersects"):
+    def select_by_location(self, target_gdf, select_gdf, predicate="intersects"):
         """Select features by spatial relationship."""
         valid_predicates = {
-            "intersects", "contains", "within", "touches",
-            "crosses", "overlaps", "covers", "covered_by"
+            "intersects",
+            "contains",
+            "within",
+            "touches",
+            "crosses",
+            "overlaps",
+            "covers",
+            "covered_by",
         }
         if predicate not in valid_predicates:
             raise ValueError(f"Invalid predicate. Use: {valid_predicates}")
 
         spatial_index = target_gdf.sindex
-        possible_matches_index = list(
-            spatial_index.query(select_gdf.geometry.unary_union,
-                              predicate=predicate)
-        )
+        possible_matches_index = list(spatial_index.query(select_gdf.geometry.unary_union, predicate=predicate))
         return target_gdf.iloc[possible_matches_index]
 
     def nearest_neighbor_analysis(self, gdf, k=1):
         """Find k nearest neighbors for each feature."""
-        from shapely.ops import nearest_points
 
-        coords = np.array(
-            [(geom.centroid.x, geom.centroid.y)
-             for geom in gdf.geometry]
-        )
+        coords = np.array([(geom.centroid.x, geom.centroid.y) for geom in gdf.geometry])
 
         from sklearn.neighbors import NearestNeighbors
+
         nbrs = NearestNeighbors(n_neighbors=min(k + 1, len(gdf)))
         nbrs.fit(coords)
         distances, indices = nbrs.kneighbors(coords)
@@ -126,18 +111,13 @@ class VectorAnalysis:
         results = []
         for i in range(len(gdf)):
             for j in range(1, min(k + 1, len(gdf))):
-                results.append({
-                    "source": i,
-                    "target": indices[i][j],
-                    "distance": distances[i][j]
-                })
+                results.append({"source": i, "target": indices[i][j], "distance": distances[i][j]})
 
         return pd.DataFrame(results)
 
     def voronoi(self, gdf, extent=None):
         """Generate Voronoi polygons from point layer."""
-        points = [geom for geom in gdf.geometry
-                  if geom.geom_type in ("Point", "MultiPoint")]
+        points = [geom for geom in gdf.geometry if geom.geom_type in ("Point", "MultiPoint")]
 
         if not points:
             raise ValueError("Input must contain Point geometries")
@@ -157,27 +137,26 @@ class VectorAnalysis:
         # Extend bounds for edge polygons
         margin_x = (maxx - minx) * 0.1
         margin_y = (maxy - miny) * 0.1
-        envelope = Polygon([
-            (minx - margin_x, miny - margin_y),
-            (maxx + margin_x, miny - margin_y),
-            (maxx + margin_x, maxy + margin_y),
-            (minx - margin_x, maxy + margin_y)
-        ])
+        envelope = Polygon(
+            [
+                (minx - margin_x, miny - margin_y),
+                (maxx + margin_x, miny - margin_y),
+                (maxx + margin_x, maxy + margin_y),
+                (minx - margin_x, maxy + margin_y),
+            ]
+        )
 
         vor = Voronoi(np.array(coords))
-        from shapely import voronoi_diagram as svd
+
         regions = svd(MultiPoint(points), envelope=envelope)
 
-        return gpd.GeoDataFrame(
-            {"geometry": list(regions.geoms)},
-            crs=gdf.crs
-        )
+        return gpd.GeoDataFrame({"geometry": list(regions.geoms)}, crs=gdf.crs)
 
     def delaunay_triangulation(self, gdf):
         """Generate Delaunay triangulation from points."""
         from shapely.ops import triangulate
-        points = [geom for geom in gdf.geometry
-                  if geom.geom_type in ("Point", "MultiPoint")]
+
+        points = [geom for geom in gdf.geometry if geom.geom_type in ("Point", "MultiPoint")]
 
         all_coords = []
         for p in points:
@@ -187,45 +166,35 @@ class VectorAnalysis:
                 all_coords.append((p.x, p.y))
 
         triangles = triangulate(MultiPoint(all_coords))
-        return gpd.GeoDataFrame(
-            {"geometry": list(triangles)},
-            crs=gdf.crs
-        )
+        return gpd.GeoDataFrame({"geometry": list(triangles)}, crs=gdf.crs)
 
     def kernel_density(self, gdf, bandwidth=None, grid_size=100):
         """Compute kernel density estimation from points."""
         from sklearn.neighbors import KernelDensity
 
-        coords = np.array([
-            (geom.centroid.x, geom.centroid.y)
-            for geom in gdf.geometry
-        ])
+        coords = np.array([(geom.centroid.x, geom.centroid.y) for geom in gdf.geometry])
 
         if bandwidth is None:
             bandwidth = gdf.total_bounds[2] - gdf.total_bounds[0]
             bandwidth /= 20
 
         bounds = gdf.total_bounds
-        xx, yy = np.meshgrid(
-            np.linspace(bounds[0], bounds[2], grid_size),
-            np.linspace(bounds[1], bounds[3], grid_size)
-        )
+        xx, yy = np.meshgrid(np.linspace(bounds[0], bounds[2], grid_size), np.linspace(bounds[1], bounds[3], grid_size))
         grid = np.vstack([xx.ravel(), yy.ravel()]).T
 
         kde = KernelDensity(bandwidth=bandwidth, kernel="gaussian")
         kde.fit(coords)
         density = np.exp(kde.score_samples(grid)).reshape(grid_size, grid_size)
 
-        import rasterio
         from rasterio.transform import from_origin
+
         cellsize_x = (bounds[2] - bounds[0]) / grid_size
         cellsize_y = (bounds[3] - bounds[1]) / grid_size
         transform = from_origin(bounds[0], bounds[3], cellsize_x, cellsize_y)
 
         return density, transform, gdf.crs
 
-    def hotspot_analysis_getis_ord(self, gdf, value_field,
-                                   weights_type="queen", k=8):
+    def hotspot_analysis_getis_ord(self, gdf, value_field, weights_type="queen", k=8):
         """Getis-Ord Gi* hotspot analysis."""
         from esda.getisord import G_Local
         from libpysal.weights import Queen, Rook, KNN
@@ -289,7 +258,7 @@ class VectorAnalysis:
             "Expected_I": mi.EI,
             "P_value": mi.p_sim,
             "Z_score": mi.z_sim,
-            "Significant": mi.p_sim < 0.05
+            "Significant": mi.p_sim < 0.05,
         }
 
     def lisa(self, gdf, value_field, weights_type="queen", permutations=999):
@@ -329,19 +298,14 @@ class VectorAnalysis:
 
     def centrality_analysis(self, gdf, weight_field=None):
         """Compute network centrality metrics."""
-        import networkx as nx
 
         G = nx.Graph()
         for i, row in gdf.iterrows():
             G.add_node(i, geometry=row.geometry.centroid)
 
         # Add edges based on distance
-        coords = np.array([
-            (row.geometry.centroid.x, row.geometry.centroid.y)
-            for _, row in gdf.iterrows()
-        ])
+        coords = np.array([(row.geometry.centroid.x, row.geometry.centroid.y) for _, row in gdf.iterrows()])
 
-        from sklearn.neighbors import NearestNeighbors
         nbrs = NearestNeighbors(n_neighbors=3)
         nbrs.fit(coords)
         distances, indices = nbrs.kneighbors(coords)
@@ -362,10 +326,8 @@ class VectorAnalysis:
             "graph_density": nx.density(G),
         }
 
-    def shortest_path(self, gdf_network, source_point, target_point,
-                      weight_field="length"):
+    def shortest_path(self, gdf_network, source_point, target_point, weight_field="length"):
         """Find shortest path on a network."""
-        import networkx as nx
 
         G = nx.Graph()
         for i, row in gdf_network.iterrows():
@@ -373,28 +335,21 @@ class VectorAnalysis:
             if geom.geom_type == "LineString":
                 coords = list(geom.coords)
                 for c in range(len(coords) - 1):
-                    length = Point(coords[c]).distance(Point(coords[c+1]))
-                    G.add_edge(
-                        coords[c], coords[c+1],
-                        weight=length,
-                        geometry=geom
-                    )
+                    length = Point(coords[c]).distance(Point(coords[c + 1]))
+                    G.add_edge(coords[c], coords[c + 1], weight=length, geometry=geom)
 
         source = (source_point.x, source_point.y)
         target = (target_point.x, target_point.y)
 
         try:
             path = nx.shortest_path(G, source, target, weight="weight")
-            path_length = nx.shortest_path_length(
-                G, source, target, weight="weight"
-            )
+            path_length = nx.shortest_path_length(G, source, target, weight="weight")
             return {"path": path, "length": path_length, "nodes": len(path)}
         except nx.NetworkXNoPath:
             return {"error": "No path found between points"}
 
     def service_area(self, gdf_network, source_point, max_distance):
         """Compute service area from a point on network."""
-        import networkx as nx
 
         G = nx.Graph()
         for i, row in gdf_network.iterrows():
@@ -402,13 +357,11 @@ class VectorAnalysis:
             if geom.geom_type == "LineString":
                 coords = list(geom.coords)
                 for c in range(len(coords) - 1):
-                    length = Point(coords[c]).distance(Point(coords[c+1]))
-                    G.add_edge(coords[c], coords[c+1], weight=length)
+                    length = Point(coords[c]).distance(Point(coords[c + 1]))
+                    G.add_edge(coords[c], coords[c + 1], weight=length)
 
         source = (source_point.x, source_point.y)
-        lengths = nx.single_source_dijkstra_path_length(
-            G, source, cutoff=max_distance, weight="weight"
-        )
+        lengths = nx.single_source_dijkstra_path_length(G, source, cutoff=max_distance, weight="weight")
 
         reachable = {n: d for n, d in lengths.items() if d <= max_distance}
         return reachable

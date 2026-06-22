@@ -1,19 +1,15 @@
-﻿"""
+"""
 geoai_data_manager.py - Geospatial Data Management
 
 Handles: Shapefile, GeoJSON, GPKG, KML, KMZ, CSV, XLSX,
 GeoTIFF, NetCDF, HDF, LAS/LAZ
 """
 
-import os
-import geopandas as gpd
-import pandas as pd
-import numpy as np
 from pathlib import Path
-from shapely.geometry import box, Point, Polygon
+from shapely.geometry import box, Point
 import warnings
-warnings.filterwarnings("ignore")
 
+warnings.filterwarnings("ignore")
 
 SUPPORTED_VECTOR = {
     ".shp": "ESRI Shapefile",
@@ -62,10 +58,8 @@ class DataManager:
         if not path.exists():
             return {"error": f"Path not found: {path}"}
 
-        all_exts = {**SUPPORTED_VECTOR, **SUPPORTED_RASTER,
-                    **SUPPORTED_TABULAR, **POINT_CLOUD}
-        found = {cat: [] for cat in
-                 ["vector", "raster", "tabular", "point_cloud", "other"]}
+        all_exts = {**SUPPORTED_VECTOR, **SUPPORTED_RASTER, **SUPPORTED_TABULAR, **POINT_CLOUD}
+        found = {cat: [] for cat in ["vector", "raster", "tabular", "point_cloud", "other"]}
 
         glob_pattern = "**/*" if recursive else "*"
         for f in path.glob(glob_pattern):
@@ -91,6 +85,7 @@ class DataManager:
             if path.endswith(".kmz"):
                 import zipfile
                 import shutil
+
                 tmp_dir = Path(self.workspace) / "_kmz_temp"
                 tmp_dir.mkdir(exist_ok=True)
                 with zipfile.ZipFile(path, "r") as z:
@@ -128,6 +123,7 @@ class DataManager:
     def read_raster(self, path, band=None):
         """Read raster data and return array + metadata."""
         import rasterio
+
         with rasterio.open(path) as src:
             data = src.read(band) if band else src.read()
             meta = src.meta.copy()
@@ -146,8 +142,7 @@ class DataManager:
         self.layers[name] = gdf
         return gdf
 
-    def read_excel_as_gdf(self, path, sheet=0, x_col="x", y_col="y",
-                          crs="EPSG:4326"):
+    def read_excel_as_gdf(self, path, sheet=0, x_col="x", y_col="y", crs="EPSG:4326"):
         """Read Excel with coordinates as GeoDataFrame."""
         df = pd.read_excel(path, sheet_name=sheet)
         geometry = [Point(x, y) for x, y in zip(df[x_col], df[y_col])]
@@ -185,7 +180,7 @@ class DataManager:
                 "null_geometries": int(gdf.geometry.isna().sum()),
                 "duplicate_geometries": int(gdf.geometry.duplicated().sum()),
                 "invalid_geometries": int(~gdf.geometry.is_valid.sum()),
-            }
+            },
         }
 
         # Coordinate range sanity check
@@ -193,7 +188,7 @@ class DataManager:
             bounds = gdf.total_bounds
             report["coordinate_check"] = {
                 "lat_in_range": -90 <= bounds[1] <= 90 and -90 <= bounds[3] <= 90,
-                "lon_in_range": -180 <= bounds[0] <= 180 and -180 <= bounds[2] <= 180
+                "lon_in_range": -180 <= bounds[0] <= 180 and -180 <= bounds[2] <= 180,
             }
 
         return report
@@ -205,9 +200,7 @@ class DataManager:
     def clip_by_extent(self, gdf, xmin, ymin, xmax, ymax):
         """Clip data by bounding box extent."""
         bbox = box(xmin, ymin, xmax, ymax)
-        bbox_gdf = gpd.GeoDataFrame(
-            {"geometry": [bbox]}, crs=gdf.crs
-        )
+        bbox_gdf = gpd.GeoDataFrame({"geometry": [bbox]}, crs=gdf.crs)
         return gpd.clip(gdf, bbox_gdf)
 
     def merge_layers(self, layer_names):
@@ -221,6 +214,7 @@ class DataManager:
     def raster_info(self, path):
         """Get comprehensive raster metadata."""
         import rasterio
+
         with rasterio.open(path) as src:
             info = {
                 "path": str(path),
@@ -234,8 +228,7 @@ class DataManager:
                 "nodata": src.nodata,
                 "resolution": (abs(src.res[0]), abs(src.res[1])),
                 "driver": src.driver,
-                "band_names": [src.descriptions[i] or f"Band {i+1}"
-                              for i in range(src.count)]
+                "band_names": [src.descriptions[i] or f"Band {i+1}" for i in range(src.count)],
             }
         return info
 

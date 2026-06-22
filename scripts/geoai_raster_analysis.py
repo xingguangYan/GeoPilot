@@ -1,13 +1,12 @@
-﻿"""
+"""
 geoai_raster_analysis.py - Raster Analysis Toolkit
 
 GDAL/SAGA/GRASS/WhiteboxTools raster operations via Python.
 """
 
-import numpy as np
-from scipy import ndimage
 from scipy.interpolate import griddata
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -16,16 +15,32 @@ class RasterAnalysis:
 
     def __init__(self):
         self.supported_methods = [
-            "clip", "resample", "mosaic", "calc", "reclassify",
-            "slope", "aspect", "hillshade", "curvature",
-            "flow_accumulation", "flow_direction", "watershed",
-            "zonal_stats", "focal_stats", "terrain_roughness",
-            "tpi", "tri", "savi", "ndvi", "ndwi"
+            "clip",
+            "resample",
+            "mosaic",
+            "calc",
+            "reclassify",
+            "slope",
+            "aspect",
+            "hillshade",
+            "curvature",
+            "flow_accumulation",
+            "flow_direction",
+            "watershed",
+            "zonal_stats",
+            "focal_stats",
+            "terrain_roughness",
+            "tpi",
+            "tri",
+            "savi",
+            "ndvi",
+            "ndwi",
         ]
 
     def read(self, path):
         """Read raster using rasterio."""
         import rasterio
+
         with rasterio.open(path) as src:
             return src.read(), src.meta
 
@@ -42,18 +57,14 @@ class RasterAnalysis:
             transform = src.window_transform(window)
             clipped = src.read(window=window)
             new_meta = src.meta.copy()
-            new_meta.update({
-                "height": window.height,
-                "width": window.width,
-                "transform": transform
-            })
+            new_meta.update({"height": window.height, "width": window.width, "transform": transform})
 
         import os
+
         os.remove("_temp.tif")
         return clipped, new_meta
 
-    def resample(self, data, meta, target_res=None, target_shape=None,
-                 method="bilinear"):
+    def resample(self, data, meta, target_res=None, target_shape=None, method="bilinear"):
         """Resample raster to new resolution or shape."""
         from rasterio.enums import Resampling
 
@@ -78,26 +89,18 @@ class RasterAnalysis:
         resample_method = methods.get(method, Resampling.bilinear)
 
         import rasterio
+
         with rasterio.open("_temp.tif", "w", **meta) as dst:
             dst.write(data)
 
         with rasterio.open("_temp.tif") as src:
-            resampled = src.read(
-                out_shape=(src.count, new_height, new_width),
-                resampling=resample_method
-            )
-            transform = src.transform * src.transform.scale(
-                src.width / new_width,
-                src.height / new_height
-            )
+            resampled = src.read(out_shape=(src.count, new_height, new_width), resampling=resample_method)
+            transform = src.transform * src.transform.scale(src.width / new_width, src.height / new_height)
             new_meta = src.meta.copy()
-            new_meta.update({
-                "height": new_height,
-                "width": new_width,
-                "transform": transform
-            })
+            new_meta.update({"height": new_height, "width": new_width, "transform": transform})
 
         import os
+
         os.remove("_temp.tif")
         return resampled, new_meta
 
@@ -110,11 +113,7 @@ class RasterAnalysis:
         mosaic_data, mosaic_transform = merge(sources)
 
         meta = sources[0].meta.copy()
-        meta.update({
-            "height": mosaic_data.shape[1],
-            "width": mosaic_data.shape[2],
-            "transform": mosaic_transform
-        })
+        meta.update({"height": mosaic_data.shape[1], "width": mosaic_data.shape[2], "transform": mosaic_transform})
 
         for src in sources:
             src.close()
@@ -130,18 +129,24 @@ class RasterAnalysis:
         if isinstance(data, list):
             locals_dict = {f"B{i+1}": d for i, d in enumerate(data)}
         else:
-            locals_dict = {"A": data[band-1] if data.ndim == 3 else data}
+            locals_dict = {"A": data[band - 1] if data.ndim == 3 else data}
 
         # Safe AST-based expression evaluator (no eval())
-        import ast as _ast
+
         _ALLOWED_NAMES = {"sin", "cos", "sqrt", "exp", "log", "where", "nanmean"}
         _SAFE_OPS = {
-            _ast.Add: lambda a, b: a + b, _ast.Sub: lambda a, b: a - b,
-            _ast.Mult: lambda a, b: a * b, _ast.Div: lambda a, b: a / b,
-            _ast.Pow: lambda a, b: a ** b, _ast.Mod: lambda a, b: a % b,
+            _ast.Add: lambda a, b: a + b,
+            _ast.Sub: lambda a, b: a - b,
+            _ast.Mult: lambda a, b: a * b,
+            _ast.Div: lambda a, b: a / b,
+            _ast.Pow: lambda a, b: a**b,
+            _ast.Mod: lambda a, b: a % b,
             _ast.FloorDiv: lambda a, b: a // b,
-            _ast.UAdd: lambda a: +a, _ast.USub: lambda a: -a, _ast.Not: lambda a: not a,
+            _ast.UAdd: lambda a: +a,
+            _ast.USub: lambda a: -a,
+            _ast.Not: lambda a: not a,
         }
+
         def _safe_eval(node):
             if isinstance(node, _ast.Expression):
                 return _safe_eval(node.body)
@@ -149,17 +154,22 @@ class RasterAnalysis:
                 return node.value
             if isinstance(node, _ast.Name):
                 name = node.id
-                if name in locals_dict: return locals_dict[name]
-                if name in _ALLOWED_NAMES: return getattr(np, name, None)
-                if name == "np": return np
+                if name in locals_dict:
+                    return locals_dict[name]
+                if name in _ALLOWED_NAMES:
+                    return getattr(np, name, None)
+                if name == "np":
+                    return np
                 raise ValueError(f"Unknown variable: {name}")
             if isinstance(node, _ast.BinOp):
                 op = _SAFE_OPS.get(type(node.op))
-                if op is None: raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
+                if op is None:
+                    raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
                 return op(_safe_eval(node.left), _safe_eval(node.right))
             if isinstance(node, _ast.UnaryOp):
                 op = _SAFE_OPS.get(type(node.op))
-                if op is None: raise ValueError(f"Unsupported unary op: {type(node.op).__name__}")
+                if op is None:
+                    raise ValueError(f"Unsupported unary op: {type(node.op).__name__}")
                 return op(_safe_eval(node.operand))
             if isinstance(node, _ast.Attribute):
                 value = _safe_eval(node.value)
@@ -171,15 +181,18 @@ class RasterAnalysis:
             if isinstance(node, _ast.Subscript):
                 return _safe_eval(node.value)[_safe_eval(node.slice)]
             if isinstance(node, _ast.Slice):
-                return slice(_safe_eval(node.lower) if node.lower else None,
-                             _safe_eval(node.upper) if node.upper else None,
-                             _safe_eval(node.step) if node.step else None)
+                return slice(
+                    _safe_eval(node.lower) if node.lower else None,
+                    _safe_eval(node.upper) if node.upper else None,
+                    _safe_eval(node.step) if node.step else None,
+                )
             if isinstance(node, _ast.Tuple):
                 return tuple(_safe_eval(e) for e in node.elts)
             if isinstance(node, _ast.List):
                 return [_safe_eval(e) for e in node.elts]
             raise ValueError(f"Unsupported expression: {type(node).__name__}")
-        _parsed = _ast.parse(formula, mode='eval')
+
+        _parsed = _ast.parse(formula, mode="eval")
         result = _safe_eval(_parsed.body)
         return result
 
@@ -187,7 +200,7 @@ class RasterAnalysis:
         """Reclassify raster values."""
         result = np.full(data.shape, nodata, dtype=np.float32)
         for i in range(len(bins) - 1):
-            mask = (data >= bins[i]) & (data < bins[i+1])
+            mask = (data >= bins[i]) & (data < bins[i + 1])
             result[mask] = values[i]
         return result
 
@@ -211,8 +224,7 @@ class RasterAnalysis:
         az_rad = np.radians(360 - azimuth + 90)
         alt_rad = np.radians(altitude)
 
-        shaded = np.sin(alt_rad) * np.sin(slope) + \
-                 np.cos(alt_rad) * np.cos(slope) * np.cos(az_rad - aspect)
+        shaded = np.sin(alt_rad) * np.sin(slope) + np.cos(alt_rad) * np.cos(slope) * np.cos(az_rad - aspect)
         return np.clip(shaded, 0, 1) * 255
 
     def curvature(self, elevation, cellsize):
@@ -225,32 +237,30 @@ class RasterAnalysis:
     def tpi(self, elevation, cellsize, radius=100):
         """Topographic Position Index."""
         from scipy.ndimage import uniform_filter
+
         cells = int(radius / cellsize)
         mean_elev = uniform_filter(elevation, size=cells, mode="reflect")
         return elevation - mean_elev
 
     def tri(self, elevation, cellsize, radius=100):
         """Terrain Ruggedness Index."""
-        from scipy.ndimage import uniform_filter
+
         cells = int(radius / cellsize)
         mean_elev = uniform_filter(elevation, size=cells, mode="reflect")
-        return np.sqrt((elevation - mean_elev)**2)
+        return np.sqrt((elevation - mean_elev) ** 2)
 
     def focal_stats(self, data, size=3, stat="mean"):
         """Focal (neighborhood) statistics."""
-        from scipy.ndimage import uniform_filter, maximum_filter, \
-            minimum_filter, generic_filter, median_filter
+        from scipy.ndimage import uniform_filter, maximum_filter, minimum_filter, generic_filter, median_filter
 
         stats_map = {
             "mean": lambda d: uniform_filter(d, size=size, mode="reflect"),
             "median": lambda d: median_filter(d, size=size, mode="reflect"),
             "max": lambda d: maximum_filter(d, size=size, mode="reflect"),
             "min": lambda d: minimum_filter(d, size=size, mode="reflect"),
-            "std": lambda d: generic_filter(
-                d, lambda x: np.std(x), size=size, mode="reflect"
-            ),
-            "range": lambda d: maximum_filter(d, size=size, mode="reflect") -
-                               minimum_filter(d, size=size, mode="reflect"),
+            "std": lambda d: generic_filter(d, lambda x: np.std(x), size=size, mode="reflect"),
+            "range": lambda d: maximum_filter(d, size=size, mode="reflect")
+            - minimum_filter(d, size=size, mode="reflect"),
         }
         func = stats_map.get(stat, stats_map["mean"])
         return func(data)
@@ -285,39 +295,30 @@ class RasterAnalysis:
 
     def interpolate(self, points, values, xi, yi, method="linear"):
         """Interpolate point data to raster grid."""
-        from scipy.interpolate import griddata
+
         grid_x, grid_y = np.meshgrid(xi, yi)
         grid_z = griddata(points, values, (grid_x, grid_y), method=method)
         return grid_z
 
     def terrain_roughness(self, elevation, cellsize):
         """Compute terrain roughness index."""
-        from scipy.ndimage import generic_filter
+
         def _roughness(window):
             return np.max(window) - np.min(window)
 
         cells = max(3, int(3 / cellsize))
-        return generic_filter(elevation, _roughness,
-                             size=cells, mode="reflect")
+        return generic_filter(elevation, _roughness, size=cells, mode="reflect")
 
-    def idw_interpolation(self, points, values, grid_shape,
-                          power=2, radius=None):
+    def idw_interpolation(self, points, values, grid_shape, power=2, radius=None):
         """Inverse Distance Weighted interpolation."""
-        grid_x = np.linspace(
-            np.min(points[:, 0]), np.max(points[:, 0]), grid_shape[1]
-        )
-        grid_y = np.linspace(
-            np.min(points[:, 1]), np.max(points[:, 1]), grid_shape[0]
-        )
+        grid_x = np.linspace(np.min(points[:, 0]), np.max(points[:, 0]), grid_shape[1])
+        grid_y = np.linspace(np.min(points[:, 1]), np.max(points[:, 1]), grid_shape[0])
         xx, yy = np.meshgrid(grid_x, grid_y)
 
         result = np.zeros(grid_shape, dtype=np.float32)
         for i in range(len(grid_x)):
             for j in range(len(grid_y)):
-                dists = np.sqrt(
-                    (points[:, 0] - grid_x[i])**2 +
-                    (points[:, 1] - grid_y[j])**2
-                )
+                dists = np.sqrt((points[:, 0] - grid_x[i]) ** 2 + (points[:, 1] - grid_y[j]) ** 2)
                 if radius:
                     mask = dists <= radius
                     dists = dists[mask]
