@@ -1,6 +1,5 @@
-"""GeoPilot Provider Registry - All LLM API Providers"""
+"""GeoPilot Provider Registry - All LLM API Providers."""
 
-# === OpenAI-Compatible Providers ===
 from .base import BaseProvider, get_provider, list_providers, register_provider
 from .openai_compat import OpenAICompatibleProvider
 from .anthropic_provider import AnthropicProvider
@@ -9,6 +8,7 @@ from .ollama_provider import OllamaProvider
 from .baidu_provider import BaiduProvider
 from .spark_provider import SparkProvider
 
+# === OpenAI-Compatible Providers ===
 register_provider(
     "openai",
     OpenAICompatibleProvider,
@@ -30,7 +30,7 @@ register_provider(
     "deepseek",
     OpenAICompatibleProvider,
     display_name="DeepSeek",
-    models=["deepseek-chat", "deepseek-reasoner", "deepseek-v3", "deepseek-r1", "deepseek-v4-pro", "deepseek-v4-flash"],
+    models=["deepseek-chat", "deepseek-reasoner", "deepseek-v3", "deepseek-r1"],
     env_key="DEEPSEEK_API_KEY",
     default_url="https://api.deepseek.com/v1",
 )
@@ -100,7 +100,7 @@ register_provider(
     "cohere",
     OpenAICompatibleProvider,
     display_name="Cohere",
-    models=["command-r-plus", "command-r", "command-nightly", "command-r7-12-2024", "command-a-03-2025"],
+    models=["command-r-plus", "command-r", "command-nightly"],
     env_key="COHERE_API_KEY",
     default_url="https://api.cohere.ai/v1",
 )
@@ -128,26 +128,25 @@ register_provider(
     OpenAICompatibleProvider,
     display_name="Together AI",
     models=[
-        "meta-llama-3.3-70b",
-        "meta-llama-3.1-405b",
-        "meta-llama-3.1-70b",
-        "mistralai/mixtral-8x22b",
+        "meta-llama/Meta-Llama-3.3-70B-Instruct-Turbo",
+        "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+        "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+        "mistralai/Mixtral-8x22B-Instruct-v0.1",
         "deepseek-ai/DeepSeek-R1",
     ],
     env_key="TOGETHER_API_KEY",
     default_url="https://api.together.xyz/v1",
 )
 
-# Split Fireworks model paths to avoid Base64 high-entropy detection
-_FW_PREFIX = "accounts/" + "fireworks/models/"
+_FW_PREFIX = "accounts/fireworks/models/"
 register_provider(
     "fireworks",
     OpenAICompatibleProvider,
     display_name="Fireworks AI",
     models=[
-        _FW_PREFIX + "llama-v3p3-70b",
-        _FW_PREFIX + "llama-v3p1-405b",
-        _FW_PREFIX + "qwen2p5-72b",
+        _FW_PREFIX + "llama-v3p3-70b-instruct",
+        _FW_PREFIX + "llama-v3p1-405b-instruct",
+        _FW_PREFIX + "qwen2p5-72b-instruct",
         _FW_PREFIX + "deepseek-r1",
     ],
     env_key="FIREWORKS_API_KEY",
@@ -195,7 +194,6 @@ register_provider(
         "gemini-1.5-pro",
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
-        "gemini-2.0-flash-exp",
     ],
 )
 
@@ -226,7 +224,16 @@ register_provider(
 )
 
 register_provider(
-    "spark", SparkProvider, display_name="iFlytek Spark / Xunfei", models=["4.0Ultra", "4.0", "3.5", "3.0"]
+    "spark",
+    SparkProvider,
+    display_name="iFlytek Spark / Xunfei",
+    models=["4.0Ultra", "4.0", "3.5", "3.0"],
 )
 
-__all__ = ["BaseProvider", "get_provider", "list_providers", "register_provider", "PROVIDER_REGISTRY"]
+__all__ = [
+    "BaseProvider",
+    "get_provider",
+    "list_providers",
+    "register_provider",
+    "PROVIDER_REGISTRY",
+]

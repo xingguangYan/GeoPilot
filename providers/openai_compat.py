@@ -1,20 +1,39 @@
-﻿\"\"\"OpenAI-Compatible Provider - All APIs that follow OpenAI chat format.\"\"\"
-import json, os
-from ._net import _post_json
-from .base import BaseProvider, register_provider
+"""OpenAI-Compatible Provider - All APIs that follow OpenAI chat format."""
+
+from ._net import _post_json, NetworkError
+from .base import BaseProvider
+
 
 class OpenAICompatibleProvider(BaseProvider):
-    ENV_KEY = 'OPENAI_API_KEY'
-    DEFAULT_URL = 'https://api.openai.com/v1'
-    def __init__(self, api_key=None, model=None, base_url=None):
-        super().__init__(api_key, model, base_url)
+    ENV_KEY = "OPENAI_API_KEY"
+    DEFAULT_URL = "https://api.openai.com/v1"
+
     def get_default_model(self):
-        return 'gpt-4o'
+        return "gpt-4o"
+
     def chat(self, messages, system_prompt=None, temperature=0.7, max_tokens=4096):
-        headers = {'Authorization': f'Bearer {self.api_key}', 'Content-Type': 'application/json'}
-        payload = {'model': self.model, 'messages': messages, 'temperature': temperature, 'max_tokens': max_tokens}
+        if not self.api_key and "localhost" not in (self.base_url or "") and "127.0.0.1" not in (self.base_url or ""):
+            return "[Error] API key is not set. Open Provider Settings to configure."
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        # Merge system prompt if passed and messages don't already start with system
+        msgs = list(messages)
+        if system_prompt and (not msgs or msgs[0].get("role") != "system"):
+            msgs.insert(0, {"role": "system", "content": system_prompt})
+        payload = {
+            "model": self.model,
+            "messages": msgs,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
         try:
-            result = _post_json(f'{self.base_url}/chat/completions', payload, headers, 120)
-            return result['choices'][0]['message']['content']
-        except Exception as e:
-            return f'[Error] {str(e)}'
+            result = _post_json(f"{self.base_url}/chat/completions", payload, headers, timeout=120)
+            return result["choices"][0]["message"]["content"]
+        except NetworkError as e:
+            return f"[Error] {e}"
+        except (KeyError, IndexError, TypeError) as e:
+            return f"[Error] Unexpected response: {e}"
+        except Exception as e:  # pragma: no cover - defensive
+            return f"[Error] {e}"
