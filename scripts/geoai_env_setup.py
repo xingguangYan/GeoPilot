@@ -1,4 +1,4 @@
-﻿import os, sys, platform, subprocess, json
+import os, sys, platform, subprocess, json
 from pathlib import Path
 
 def detect_qgis():

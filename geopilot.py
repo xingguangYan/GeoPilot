@@ -1,11 +1,11 @@
-"""GeoPilot - Main QGIS Plugin Class"""
+"""GeoPilot - Main QGIS Plugin Class."""
 
 import os
 import sys
 
-from qgis.core import QgsApplication
-from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction
+from qgis.core import QgsApplication
 
 PLUGIN_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS_DIR = os.path.join(PLUGIN_DIR, "scripts")
@@ -19,20 +19,23 @@ class GeoPilotPlugin:
         self.plugin_dir = PLUGIN_DIR
         self.actions = []
         self.menu = "GeoPilot"
-        self.toolbar = self.iface.addToolBar("GeoPilot")
-        self.toolbar.setObjectName("GeoPilotToolbar")
+        self.toolbar = None
         self.dialog = None
-        self.translator = None
 
-        # Add scripts to path
+        # Add scripts to sys.path (idempotent)
         if SCRIPTS_DIR not in sys.path:
             sys.path.insert(0, SCRIPTS_DIR)
 
     def initGui(self):
-        """Initialize the plugin GUI."""
+        """Create the menu entries and toolbar icons inside the QGIS GUI."""
         icon_path = os.path.join(self.plugin_dir, "icons", "icon.png")
         if not os.path.exists(icon_path):
             icon_path = QgsApplication.iconPath("mIconRaster.svg")
+
+        # Use an existing toolbar or create one, but own the reference so we
+        # can remove it cleanly on unload.
+        self.toolbar = self.iface.addToolBar("GeoPilot")
+        self.toolbar.setObjectName("GeoPilotToolbar")
 
         action = QAction(QIcon(icon_path), "GeoPilot Chat", self.iface.mainWindow())
         action.triggered.connect(self.show_dialog)
@@ -41,16 +44,32 @@ class GeoPilotPlugin:
         self.actions.append(action)
 
     def unload(self):
-        """Unload the plugin."""
+        """Remove the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
             self.iface.removePluginMenu(self.menu, action)
             self.iface.removeToolBarIcon(action)
         if self.dialog:
-            self.dialog.close()
+            try:
+                self.dialog.close()
+            except Exception:
+                pass
+            self.dialog = None
+        if self.toolbar:
+            try:
+                self.toolbar.deleteLater()
+            except Exception:
+                pass
+            self.toolbar = None
+        # Best-effort: remove our SCRIPTS_DIR from sys.path
+        try:
+            while SCRIPTS_DIR in sys.path:
+                sys.path.remove(SCRIPTS_DIR)
+        except Exception:
+            pass
 
     def show_dialog(self):
         """Open the GeoPilot chat dialog."""
-        if not self.dialog:
+        if self.dialog is None:
             from .geopilot_dialog import GeoPilotDialog
 
             self.dialog = GeoPilotDialog(self.iface, self.plugin_dir)

@@ -1,6 +1,6 @@
-"""
-GeoPilot - AI-powered Geospatial Analysis Assistant for QGIS
-"""
+"""GeoPilot - AI-powered Geospatial Analysis Assistant for QGIS."""
+
+__version__ = "1.3.8"
 
 
 def classFactory(iface):

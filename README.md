@@ -1,4 +1,4 @@
-﻿# GeoPilot - AI Geospatial Assistant for QGIS
+# GeoPilot - AI Geospatial Assistant for QGIS
 
 [![QGIS](https://img.shields.io/badge/QGIS-3.30+-41B95C)](https://qgis.org)
 [![Python](https://img.shields.io/badge/Python-3.12+-blue)](https://python.org)
@@ -18,10 +18,11 @@
 ## ✨ Features
 
 ### 🎯 Core Capabilities
-- **Natural Language → QGIS Operations**: Describe tasks in plain language, GeoPilot executes them automatically
-- **Auto Code Execution**: AI-generated Python code runs directly in QGIS — buffers, clips, NDVI, classifications all happen live
+- **Natural Language → QGIS Operations**: Describe tasks in plain language, GeoPilot generates Python code for you
+- **Reviewed Code Execution**: AI-generated Python is shown in chat; by default you confirm before it runs (auto-run is opt-in)
 - **18 AI Providers**: OpenAI, DeepSeek, Moonshot, Qwen, Zhipu, Yi, Mistral, Cohere, Perplexity, xAI Grok, Together AI, Fireworks AI, Groq, Anthropic Claude, Google Gemini, Ollama (Local), Baidu ERNIE, iFlytek Spark
 - **Smart Context Awareness**: Auto-detects current layers, CRS, fields, and available algorithms to inform the AI
+- **Safe-by-default networking**: SSL certificate verification, HTTP error handling, and a blocklist of dangerous builtins (os.system, subprocess, shutil.rmtree, eval)
 
 ### 🗺️ Geospatial Analysis
 | Category | Capabilities |
@@ -83,10 +84,10 @@ Base URL: (leave default) # Most providers have pre-configured endpoints
 
 ### 3. Start Working!
 Just type what you want in natural language. GeoPilot will:
-1. Understand your request
-2. Generate QGIS Python code
-3. **Execute it automatically** in QGIS
-4. Show results in the chat
+1. Understand your request and gather the current QGIS project context
+2. Generate QGIS Python code and show it in the chat
+3. **Ask you to confirm** before running the code (uncheck "Auto-execute" in Provider Settings to skip)
+4. Execute the confirmed code and show results (layers, output, or errors) in the chat
 
 ### 💬 Example Prompts
 
@@ -225,24 +226,30 @@ GeoPilot/
 
 ---
 
-## 🧠 How Auto-Execution Works
+## 🧠 How Code Execution Works
 
-The core innovation of GeoPilot is the **code execution pipeline**:
+The core innovation of GeoPilot is the **review-then-execute pipeline**:
 
 ```mermaid
 flowchart LR
     A[User: "Buffer by 100m"] --> B[AI generates Python code]
     B --> C[Code extracted from response]
-    C --> D[QGIS exec\(\) runs the code]
-    D --> E[Layer created, results shown]
-    D --> F[iface.messageBar feedback]
+    C --> D{Auto-execute enabled?}
+    D -- No (default) --> E[User confirms in dialog]
+    D -- Yes --> F[Dangerous-call guard]
+    E --> F
+    F --> G[QGIS exec runs code in restrained namespace]
+    G --> H[Layer created, results shown]
 ```
 
 1. **Context Gathering**: `build_qgis_context()` collects all layer info, CRS, fields, and available algorithms
 2. **AI Processing**: The LLM generates QGIS Python code based on context and user request
-3. **Code Extraction**: `exec_qgis_code()` extracts ```python blocks from the AI response
-4. **Execution**: Code runs directly in QGIS via `exec()` with full QGIS API access
-5. **Feedback**: Results (new layers, processing output, errors) are displayed in the chat
+3. **Code Extraction**: fenced ```python blocks are pulled from the AI response
+4. **Safety Gate**: If auto-execute is off (default), a dialog asks you to confirm; a regex guard blocks obvious destructive calls (`os.system`, `subprocess`, `shutil.rmtree`, `eval`)
+5. **Execution**: Code runs via `exec()` with a curated QGIS namespace (iface, processing, QgsProject, etc.) and print output captured
+6. **Feedback**: Results (new layers, processing output, errors) are displayed in the chat and logged to the QGIS message log
+
+> ⚠️ **Security note**: Code execution is not sandboxed at the Python level. Only auto-execute code from providers you trust, and keep review-confirmation enabled unless you understand the risk.
 
 ---
 
